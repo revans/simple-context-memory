@@ -49,21 +49,14 @@ your-project/
 
 ### Steps
 
-1. Clone this repo (or download the two files from `commands/`):
+Install globally — these commands are useful in every project, not just one.
+
+1. Clone this repo:
    ```bash
    git clone https://github.com/mrgrampz/simple-context-memory
    ```
 
-2. Copy the commands to wherever you want them:
-
-   For a single project:
-   ```bash
-   mkdir -p your-project/.claude/commands
-   cp simple-context-memory/commands/opening.md your-project/.claude/commands/
-   cp simple-context-memory/commands/closing.md your-project/.claude/commands/
-   ```
-
-   For all projects (global):
+2. Copy the commands to your global Claude Code commands directory:
    ```bash
    mkdir -p ~/.claude/commands
    cp simple-context-memory/commands/opening.md ~/.claude/commands/
@@ -71,6 +64,13 @@ your-project/
    ```
 
 3. That's it. Claude Code picks up `.md` files in `commands/` directories automatically — no config, no restart.
+
+If you only want them in a single project instead:
+```bash
+mkdir -p your-project/.claude/commands
+cp simple-context-memory/commands/opening.md your-project/.claude/commands/
+cp simple-context-memory/commands/closing.md your-project/.claude/commands/
+```
 
 ---
 
@@ -102,13 +102,43 @@ Claude reads the most recent session file from `docs/sessions/` and gives you a 
 
 The `summary` mode is the one you want after a long break — it tells the story of how the project arrived at its current shape. The `search` mode is useful when you remember something was decided but not when: `/opening search why did we drop the webhook approach`.
 
+**Subagents for the heavy modes** — `summary`, `search`, `last-week`, and `all` spin up a subagent to do the reading and synthesis. Think of a subagent like a research assistant you send to the library: they read all the session files, compile the answer, and hand you a summary — without any of that raw material ever entering your current context window. The default `/opening` and small numeric modes (`/opening 2`) load directly into context because they're small enough that it doesn't matter.
+
 ### Ending a session
 
-Before you close Claude Code, run:
+Before you close Claude Code — or before the context window fills up — run:
 
 ```
 /closing
 ```
+
+**Don't wait until the end.** Claude Code compacts the context window automatically when it gets full, and compaction is lossy — it summarizes rather than preserves. Once compaction happens, the fine-grained reasoning about *why* decisions were made is gone. Run `/closing` before that happens.
+
+Think of it like saving a document: you don't wait until your computer crashes. If the session has been long, run `/closing` while the context is still intact, then keep going.
+
+#### Hook: get a warning before compaction
+
+You can configure Claude Code to remind you when the context window is getting full. Add this to your `.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Context window is nearly full. Consider running /closing to capture this session before compaction.'"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+When Claude Code is about to compact, this hook fires and the message appears in your session — a nudge to run `/closing` while the context is still complete.
 
 Claude writes a session document to `docs/sessions/` with a timestamp filename. The document covers six sections:
 
@@ -130,6 +160,8 @@ This writes a focused document covering only the conversation around that topic,
 ---
 
 ## The docs/sessions/ directory
+
+`docs/sessions/` is created in **whichever directory you started Claude Code from** — not in `~/.claude/` where the commands live. The commands are global; the session files are local to the project. If you start Claude Code inside `~/projects/my-api/`, your sessions land in `~/projects/my-api/docs/sessions/`. Different project, different directory.
 
 Sessions accumulate as plain Markdown files with timestamp filenames:
 
