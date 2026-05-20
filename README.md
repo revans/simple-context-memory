@@ -118,18 +118,22 @@ Think of it like saving a document: you don't wait until your computer crashes. 
 
 #### Hook: get a warning before compaction
 
-You can configure Claude Code to remind you when the context window is getting full. Add this to your `.claude/settings.json`:
+You can configure Claude Code to check the context window on every turn and warn you before it fills. The hook type is `UserPromptSubmit` — it fires on every message you send, like a pulse check. The command needs to be a script that reads the current session's token count and prints a warning if it's above a threshold.
+
+The script works by reading `~/.claude/projects/*/*.jsonl` (Claude Code logs every session there), finding the most recent assistant message with usage data, and comparing the token count against the context window size. Two thresholds make sense: a first notice around 60% ("consider running `/closing` soon") and an urgent warning around 75% ("run it now").
+
+Wire it up in `~/.claude/settings.json`:
 
 ```json
 {
   "hooks": {
-    "PreCompact": [
+    "UserPromptSubmit": [
       {
         "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'Context window is nearly full. Consider running /closing to capture this session before compaction.'"
+            "command": "python3 /path/to/your/context-watch.py"
           }
         ]
       }
@@ -138,7 +142,7 @@ You can configure Claude Code to remind you when the context window is getting f
 }
 ```
 
-When Claude Code is about to compact, this hook fires and the message appears in your session — a nudge to run `/closing` while the context is still complete.
+This repo does not ship a context-watch script — how you implement it is personal preference. The key things the script needs to do: find the most recently modified JSONL in `~/.claude/projects/`, parse backwards through it for the last assistant `usage` block (which contains `input_tokens`, `cache_read_input_tokens`, and `cache_creation_input_tokens`), sum them, and divide by your model's context window size. Hardcode the context window for your model — `200_000` for claude-sonnet-4-6.
 
 Claude writes a session document to `docs/sessions/` with a timestamp filename. The document covers six sections:
 
