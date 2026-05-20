@@ -10,6 +10,18 @@ This repo gives you two Claude Code slash commands that implement exactly that s
 
 ---
 
+## Contents
+
+- [The Commands](#the-commands)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Starting a session](#starting-a-session)
+  - [Ending a session](#ending-a-session)
+- [The docs/sessions/ directory](#the-docssessions-directory)
+- [Why this works](#why-this-works)
+
+---
+
 ## The Commands
 
 ### `/opening` — Load context at the start of a session
@@ -154,6 +166,66 @@ Claude writes a session document to `docs/sessions/` with a timestamp filename. 
 - **Threads We Pulled** — lines of thinking explored even if no decision was reached
 - **Open Questions** — what was explicitly deferred
 - **Files Changed** — what changed and where
+
+#### Example output
+
+```markdown
+---
+project: billing-api
+date: 2026-05-19
+time: 14:32
+working_directory: /home/dev/projects/billing-api
+previous_session: 2026-05-16-0914-stripe-webhook-setup.md
+---
+
+# Session: Drop Idempotency Table
+
+## What We Did
+
+- Removed the `idempotency_keys` table and `IdempotencyKey` model entirely
+- Switched to Stripe's built-in idempotency key header (`Idempotency-Key`) on all
+  POST requests to Stripe — passed directly from the incoming webhook payload's
+  `stripe_event_id`
+- Updated `app/services/payment_processor.rb` to pass the key on charge creation
+- Removed the `20260518_create_idempotency_keys.rb` migration (rolled back before drop)
+
+## Why We Did It This Way
+
+We were maintaining a local idempotency table to prevent double-charging on retried
+webhooks. Stripe already does this natively — passing the same `Idempotency-Key`
+header on a Stripe API call returns the original response without re-executing the
+charge. Our table was duplicating protection Stripe provides for free and adding a
+write on every payment path. Deleting it was the right call.
+
+## Roads Not Taken
+
+**Redis-backed idempotency store** — proposed as a lighter alternative to Postgres.
+Rejected: still solving a problem Stripe already solves, and adds an infrastructure
+dependency for no gain.
+
+**Keeping the table for non-Stripe operations** — we only have one payment path right
+now, so this was over-engineering for a hypothetical. If a second payment provider is
+ever added, the table can be reintroduced then.
+
+## Threads We Pulled
+
+Looked at whether Stripe's idempotency window (24 hours) was sufficient for our retry
+policy (retries within 6 hours). It is. Would need revisiting if retry window expands.
+
+## Open Questions
+
+- Do we want to log the `Idempotency-Key` values we send to Stripe for audit purposes,
+  or is Stripe's dashboard sufficient? Deferred — not a blocker.
+
+## Files Changed
+
+- `app/services/payment_processor.rb` — added `idempotency_key:` param to Stripe charge call
+- `app/models/idempotency_key.rb` — deleted
+- `db/migrate/20260518_create_idempotency_keys.rb` — deleted
+- `spec/services/payment_processor_spec.rb` — removed idempotency table fixtures
+```
+
+Notice what this document does that the code and git history don't: it explains why the Redis alternative was rejected, and it records that Stripe's 24-hour idempotency window was explicitly checked against the retry policy. Six months from now, when someone wonders "did we ever consider a Redis cache here?" — this is where the answer lives.
 
 **Scoped closing** — if you only want to capture one specific decision or topic rather than the full session:
 
