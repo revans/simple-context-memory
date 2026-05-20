@@ -65,7 +65,7 @@ Install globally — these commands are useful in every project, not just one.
 
 1. Clone this repo:
    ```bash
-   git clone https://github.com/mrgrampz/simple-context-memory
+   git clone https://github.com/revans/simple-context-memory
    ```
 
 2. Copy the commands to your global Claude Code commands directory:
