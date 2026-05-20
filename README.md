@@ -102,7 +102,7 @@ Claude reads the most recent session file from `docs/sessions/` and gives you a 
 
 The `summary` mode is the one you want after a long break — it tells the story of how the project arrived at its current shape. The `search` mode is useful when you remember something was decided but not when: `/opening search why did we drop the webhook approach`.
 
-**Subagents for the heavy modes** — `summary`, `search`, `last-week`, and `all` spin up a subagent to do the reading and synthesis. Think of a subagent like a research assistant you send to the library: they read all the session files, compile the answer, and hand you a summary — without any of that raw material ever entering your current context window. The default `/opening` and small numeric modes (`/opening 2`) load directly into context because they're small enough that it doesn't matter.
+**Subagents for large loads** — when a mode returns 3 or more session files, `/opening` delegates to a subagent rather than reading them directly. Think of a subagent like a research assistant you send to the library: they read all the files, compile the answer, and hand you a summary — without any of that raw content ever entering your current context window. Modes that return 1–2 files load inline because the volume is small enough that it doesn't matter. `search` always delegates regardless of file count — question-answering is exactly the kind of synthesis a subagent handles well.
 
 ### Ending a session
 
@@ -143,6 +143,8 @@ Wire it up in `~/.claude/settings.json`:
 ```
 
 This repo does not ship a context-watch script — how you implement it is personal preference. The key things the script needs to do: find the most recently modified JSONL in `~/.claude/projects/`, parse backwards through it for the last assistant `usage` block (which contains `input_tokens`, `cache_read_input_tokens`, and `cache_creation_input_tokens`), sum them, and divide by your model's context window size. Hardcode the context window for your model — `200_000` for claude-sonnet-4-6.
+
+### What /closing writes
 
 Claude writes a session document to `docs/sessions/` with a timestamp filename. The document covers six sections:
 
