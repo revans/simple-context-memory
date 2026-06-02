@@ -17,6 +17,7 @@ This repo gives you two Claude Code slash commands that implement exactly that s
 - [Usage](#usage)
   - [Starting a session](#starting-a-session)
   - [Ending a session](#ending-a-session)
+  - [Hooks](#hooks)
 - [The docs/sessions/ directory](#the-docssessions-directory)
 - [Why this works](#why-this-works)
 
@@ -75,29 +76,13 @@ Install globally — these commands are useful in every project, not just one.
    cp simple-context-memory/commands/closing.md ~/.claude/commands/
    ```
 
-3. _(Optional)_ Install the context-watch hook to get warned before compaction:
+3. _(Optional)_ Install the compaction hooks for automatic session protection:
    ```bash
    cp simple-context-memory/scripts/context-watch.py ~/.claude/context-watch.py
+   cp simple-context-memory/scripts/pre-compact.py ~/.claude/pre-compact.py
+   cp simple-context-memory/scripts/post-compact.py ~/.claude/post-compact.py
    ```
-   Then add this to `~/.claude/settings.json`:
-   ```json
-   {
-     "hooks": {
-       "UserPromptSubmit": [
-         {
-           "matcher": "",
-           "hooks": [
-             {
-               "type": "command",
-               "command": "python3 ~/.claude/context-watch.py"
-             }
-           ]
-         }
-       ]
-     }
-   }
-   ```
-   The hook fires on every message and prints a warning when context hits 60% or 75% full. See [Hook: get a warning before compaction](#hook-get-a-warning-before-compaction) for details.
+   See [Hooks](#hooks) for the `~/.claude/settings.json` configuration and what each script does.
 
 4. That's it. Claude Code picks up `.md` files in `commands/` directories automatically — no config, no restart.
 
@@ -152,13 +137,25 @@ Before you close Claude Code — or before the context window fills up — run:
 
 Think of it like saving a document: you don't wait until your computer crashes. If the session has been long, run `/closing` while the context is still intact, then keep going.
 
-#### Hook: get a warning before compaction
+#### Hooks
 
-You can configure Claude Code to check the context window on every turn and warn you before it fills. The hook type is `UserPromptSubmit` — it fires on every message you send, like a pulse check. The command needs to be a script that reads the current session's token count and prints a warning if it's above a threshold.
+Three scripts in `scripts/` work together to automate compaction protection:
 
-The script works by reading `~/.claude/projects/*/*.jsonl` (Claude Code logs every session there), finding the most recent assistant message with usage data, and comparing the token count against the context window size. Two thresholds make sense: a first notice around 60% ("consider running `/closing` soon") and an urgent warning around 75% ("run it now").
+| Script | Hook type | What it does |
+|---|---|---|
+| `context-watch.py` | `UserPromptSubmit` | Warns at 60% and 75% context — early notice to run `/closing` manually |
+| `pre-compact.py` | `PreCompact` | Safety net: instructs Claude to write a session document immediately before compaction runs |
+| `post-compact.py` | `PostCompact` | After compaction, tells you which session file was written and prompts you to run `/opening` |
 
-Wire it up in `~/.claude/settings.json`:
+The three work as a layered defence. `context-watch.py` gives you time to act. `pre-compact.py` acts automatically if you don't. `post-compact.py` reorients you after the context is compressed.
+
+Copy the scripts somewhere permanent and wire them up in `~/.claude/settings.json`:
+
+```bash
+cp simple-context-memory/scripts/context-watch.py ~/.claude/context-watch.py
+cp simple-context-memory/scripts/pre-compact.py ~/.claude/pre-compact.py
+cp simple-context-memory/scripts/post-compact.py ~/.claude/post-compact.py
+```
 
 ```json
 {
@@ -173,12 +170,38 @@ Wire it up in `~/.claude/settings.json`:
           }
         ]
       }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/pre-compact.py"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/post-compact.py"
+          }
+        ]
+      }
     ]
   }
 }
 ```
 
-A reference implementation ships in `scripts/context-watch.py`. Copy it anywhere on your machine and point the `command` path at it. The script reads the most recently modified JSONL in `~/.claude/projects/`, parses backwards through it for the last assistant `usage` block (which contains `input_tokens`, `cache_read_input_tokens`, and `cache_creation_input_tokens`), sums them, and compares against the context window size. The context window is hardcoded to `200_000` (claude-sonnet-4-6) — update the `CONTEXT_WINDOW` constant at the top of the file if you're running a different model.
+**`context-watch.py`** reads the most recently modified JSONL in `~/.claude/projects/`, parses backwards for the last assistant `usage` block, sums `input_tokens`, `cache_read_input_tokens`, and `cache_creation_input_tokens`, and compares against the context window size. The context window is hardcoded to `200_000` (claude-sonnet-4-6) — update the `CONTEXT_WINDOW` constant at the top of the file if you're running a different model.
+
+**`pre-compact.py`** prints the full session document format as an instruction. Claude writes the file before compaction proceeds.
+
+**`post-compact.py`** checks `docs/sessions/` for the most recent file. If one exists, it names it and tells you to run `/opening`. If not, it tells you to run `/closing` immediately to capture what remains.
 
 ### What /closing writes
 
