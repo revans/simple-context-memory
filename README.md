@@ -75,7 +75,31 @@ Install globally — these commands are useful in every project, not just one.
    cp simple-context-memory/commands/closing.md ~/.claude/commands/
    ```
 
-3. That's it. Claude Code picks up `.md` files in `commands/` directories automatically — no config, no restart.
+3. _(Optional)_ Install the context-watch hook to get warned before compaction:
+   ```bash
+   cp simple-context-memory/scripts/context-watch.py ~/.claude/context-watch.py
+   ```
+   Then add this to `~/.claude/settings.json`:
+   ```json
+   {
+     "hooks": {
+       "UserPromptSubmit": [
+         {
+           "matcher": "",
+           "hooks": [
+             {
+               "type": "command",
+               "command": "python3 ~/.claude/context-watch.py"
+             }
+           ]
+         }
+       ]
+     }
+   }
+   ```
+   The hook fires on every message and prints a warning when context hits 60% or 75% full. See [Hook: get a warning before compaction](#hook-get-a-warning-before-compaction) for details.
+
+4. That's it. Claude Code picks up `.md` files in `commands/` directories automatically — no config, no restart.
 
 If you only want them in a single project instead:
 ```bash
@@ -145,7 +169,7 @@ Wire it up in `~/.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /path/to/your/context-watch.py"
+            "command": "python3 ~/.claude/context-watch.py"
           }
         ]
       }
@@ -154,7 +178,7 @@ Wire it up in `~/.claude/settings.json`:
 }
 ```
 
-This repo does not ship a context-watch script — how you implement it is personal preference. The key things the script needs to do: find the most recently modified JSONL in `~/.claude/projects/`, parse backwards through it for the last assistant `usage` block (which contains `input_tokens`, `cache_read_input_tokens`, and `cache_creation_input_tokens`), sum them, and divide by your model's context window size. Hardcode the context window for your model — `200_000` for claude-sonnet-4-6.
+A reference implementation ships in `scripts/context-watch.py`. Copy it anywhere on your machine and point the `command` path at it. The script reads the most recently modified JSONL in `~/.claude/projects/`, parses backwards through it for the last assistant `usage` block (which contains `input_tokens`, `cache_read_input_tokens`, and `cache_creation_input_tokens`), sums them, and compares against the context window size. The context window is hardcoded to `200_000` (claude-sonnet-4-6) — update the `CONTEXT_WINDOW` constant at the top of the file if you're running a different model.
 
 ### What /closing writes
 

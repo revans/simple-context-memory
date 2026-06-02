@@ -56,7 +56,7 @@ ls docs/sessions/$(date +%Y-%m-%d)-*.md 2>/dev/null | sort
 ### For yesterday:
 
 ```bash
-ls docs/sessions/$(date -d 'yesterday' +%Y-%m-%d)-*.md 2>/dev/null | sort
+ls docs/sessions/$(python3 -c "from datetime import date, timedelta; print(date.today() - timedelta(days=1))")-*.md 2>/dev/null | sort
 ```
 
 ### For last-week:
@@ -64,8 +64,11 @@ ls docs/sessions/$(date -d 'yesterday' +%Y-%m-%d)-*.md 2>/dev/null | sort
 Generate the 7 date prefixes for the past 7 days (not including today) and filter matching files:
 
 ```bash
-for i in {1..7}; do date -d "$i days ago" +%Y-%m-%d; done | \
-  xargs -I{} sh -c 'ls docs/sessions/{}-*.md 2>/dev/null' | sort
+python3 -c "
+from datetime import date, timedelta
+for i in range(1, 8):
+    print(date.today() - timedelta(days=i))
+" | xargs -I{} sh -c 'ls docs/sessions/{}-*.md 2>/dev/null' | sort
 ```
 
 ### For arc / summary:
@@ -142,6 +145,8 @@ The subagent reads all documents and returns the finished synthesis. You present
 >
 > **Mode:** {{mode name}}
 >
+> **Query:** {{the extracted query text — only present when mode is search}}
+>
 > {{Paste the relevant synthesis instructions from Step 4 here, verbatim}}
 >
 > After the synthesis, output one confirmation line:
@@ -197,7 +202,7 @@ For date-range modes (today, yesterday, last-week), group by session at the top 
 
 Answer the question directly from the session record. Do not summarize unrelated context.
 
-**The question:** {{query passed by the user}}
+**The question:** the query stated in the **Query** field above this synthesis block.
 
 **Direct answer** — what was decided, chosen, or concluded, in 2–4 sentences. Be specific: name the decision, name the reason.
 
