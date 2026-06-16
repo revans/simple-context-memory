@@ -371,9 +371,17 @@ Commit both to your repo. The session history and the report together are the in
 
 Think of a surgical shift handoff. When one surgeon hands off to another, they don't read the full patient chart — they write a one-page note: what changed on this shift, what decisions were made and why, what's still open. The incoming surgeon reads the note, not the chart.
 
-`/closing` is that note. The structured format — Summary, What We Did, Why We Did It This Way, Roads Not Taken, Key Discoveries, Open Questions — does the compression work *before* the document enters context. Each section signals to Claude what's load-bearing. The Do Not constraints in Roads Not Taken front-load the guard rails so a future session sees them before it starts reasoning about the problem.
+`/closing` is that note. Before writing any section, Claude reasons through the session using SBAR-C — a nursing handoff framework — as a completeness check:
 
-Contrast this with dumping raw chat history: Claude sees a wall of text with no signal about what matters. The structured document extracts the signal so Claude doesn't have to.
+- **Situation** — what is the current state?
+- **Background** — what led to the key decisions?
+- **Assessment** — what was figured out that wasn't known before?
+- **Recommendation** — what needs to happen next?
+- **Contingency** — what assumptions were made that, if they change, would reopen a closed decision?
+
+This reasoning doesn't produce extra sections. It surfaces content for the sections that already exist — and crucially, it catches contingencies before they get buried. A contingency lands as a conditional in the Do Not line: *Do not X because Y — unless Z, in which case reconsider.* That way the guard rail carries its own expiry condition.
+
+The structured format — Summary, What We Did, Why We Did It This Way, Roads Not Taken, Key Discoveries, Open Questions — does the compression work *before* the document enters context. Each section signals to Claude what's load-bearing. Contrast this with dumping raw chat history: Claude sees a wall of text with no signal about what matters. The structured document extracts the signal so Claude doesn't have to.
 
 ### Why `/opening` works
 
