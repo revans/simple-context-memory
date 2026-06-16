@@ -78,9 +78,10 @@ Install globally — these commands are useful in every project, not just one.
 
 3. _(Optional)_ Install the compaction hooks for automatic session protection:
    ```bash
-   cp simple-context-memory/scripts/context-watch.py ~/.claude/context-watch.py
-   cp simple-context-memory/scripts/pre-compact.py ~/.claude/pre-compact.py
-   cp simple-context-memory/scripts/post-compact.py ~/.claude/post-compact.py
+   mkdir -p ~/.claude/hooks
+   cp simple-context-memory/scripts/context-watch.py ~/.claude/hooks/context-watch.py
+   cp simple-context-memory/scripts/pre-compact.py ~/.claude/hooks/pre-compact.py
+   cp simple-context-memory/scripts/post-compact.py ~/.claude/hooks/post-compact.py
    ```
    See [Hooks](#hooks) for the `~/.claude/settings.json` configuration and what each script does.
 
@@ -149,12 +150,13 @@ Three scripts in `scripts/` work together to automate compaction protection:
 
 The three work as a layered defence. `context-watch.py` gives you time to act. `pre-compact.py` acts automatically if you don't. `post-compact.py` reorients you after the context is compressed.
 
-Copy the scripts somewhere permanent and wire them up in `~/.claude/settings.json`:
+Copy the scripts to `~/.claude/hooks/` and wire them up in `~/.claude/settings.json`:
 
 ```bash
-cp simple-context-memory/scripts/context-watch.py ~/.claude/context-watch.py
-cp simple-context-memory/scripts/pre-compact.py ~/.claude/pre-compact.py
-cp simple-context-memory/scripts/post-compact.py ~/.claude/post-compact.py
+mkdir -p ~/.claude/hooks
+cp simple-context-memory/scripts/context-watch.py ~/.claude/hooks/context-watch.py
+cp simple-context-memory/scripts/pre-compact.py ~/.claude/hooks/pre-compact.py
+cp simple-context-memory/scripts/post-compact.py ~/.claude/hooks/post-compact.py
 ```
 
 ```json
@@ -166,7 +168,7 @@ cp simple-context-memory/scripts/post-compact.py ~/.claude/post-compact.py
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ~/.claude/context-watch.py"
+            "command": "python3 ~/.claude/hooks/context-watch.py"
           }
         ]
       }
@@ -177,7 +179,7 @@ cp simple-context-memory/scripts/post-compact.py ~/.claude/post-compact.py
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ~/.claude/pre-compact.py"
+            "command": "python3 ~/.claude/hooks/pre-compact.py"
           }
         ]
       }
@@ -188,7 +190,7 @@ cp simple-context-memory/scripts/post-compact.py ~/.claude/post-compact.py
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ~/.claude/post-compact.py"
+            "command": "python3 ~/.claude/hooks/post-compact.py"
           }
         ]
       }
@@ -197,22 +199,23 @@ cp simple-context-memory/scripts/post-compact.py ~/.claude/post-compact.py
 }
 ```
 
-**`context-watch.py`** reads the most recently modified JSONL in `~/.claude/projects/`, parses backwards for the last assistant `usage` block, sums `input_tokens`, `cache_read_input_tokens`, and `cache_creation_input_tokens`, and compares against the context window size. The context window is hardcoded to `200_000` (claude-sonnet-4-6) — update the `CONTEXT_WINDOW` constant at the top of the file if you're running a different model.
+**`context-watch.py`** reads `transcript_path` from the hook's stdin payload to identify the exact JSONL for the current session, then parses it backwards for the last assistant `usage` block, summing `input_tokens`, `cache_read_input_tokens`, and `cache_creation_input_tokens`. The context window is hardcoded to `200_000` (claude-sonnet-4-6) — update the `CONTEXT_WINDOW` constant at the top of the file if you're running a different model.
 
 **`pre-compact.py`** prints the full session document format as an instruction. Claude writes the file before compaction proceeds.
 
-**`post-compact.py`** checks `docs/sessions/` for the most recent file. If one exists, it names it and tells you to run `/opening`. If not, it tells you to run `/closing` immediately to capture what remains.
+**`post-compact.py`** reads `cwd` from the hook's stdin payload to locate the correct project directory, then checks `docs/sessions/` for the most recent file. If one exists, it names it and tells you to run `/opening`. If not, it tells you to run `/closing` immediately to capture what remains.
 
 ### What /closing writes
 
-Claude writes a session document to `docs/sessions/` with a timestamp filename. The document covers six sections:
+Claude writes a session document to `docs/sessions/` with a timestamp filename. The document covers seven sections:
 
+- **Summary** — 2-3 sentences: what the session was about, the most important change, and what the next session picks up. Written to orient in ten seconds without reading anything else.
 - **What We Did** — specific things built or decided (file paths, function names, design choices)
 - **Why We Did It This Way** — the reasoning, so future sessions don't re-litigate it
-- **Roads Not Taken** — what was proposed and rejected, and why. This is the most important section — it's the institutional memory that doesn't appear in the code or git history
-- **Threads We Pulled** — lines of thinking explored even if no decision was reached
-- **Open Questions** — what was explicitly deferred
-- **Files Changed** — what changed and where
+- **Roads Not Taken** — what was proposed and rejected, and why. Each entry ends with a bold **Do not [X] because [Y]** constraint — the guard rail a future session sees before it starts reasoning about the problem
+- **Key Discoveries** — questions answered during the session, formatted as question → answer pairs. Root causes traced, misconceptions corrected, empirical findings. What a future session needs to know so it doesn't re-discover it
+- **Open Questions & Next Steps** — what was deferred, left unresolved, or suggested but not acted on. Includes action items, half-decisions, and review findings noted for later
+- **Files Changed** — what changed and where, plus any constraint a future session needs before touching that file again
 
 #### Example output
 
@@ -226,6 +229,12 @@ previous_session: 2026-05-16-0914-stripe-webhook-setup.md
 ---
 
 # Session: Drop Idempotency Table
+
+## Summary
+
+Removed the local idempotency table and switched to Stripe's native idempotency key
+support. The table was duplicating protection Stripe already provides for free. Next
+session: decide whether to log the Stripe idempotency keys we send for audit purposes.
 
 ## What We Did
 
@@ -248,31 +257,38 @@ write on every payment path. Deleting it was the right call.
 
 **Redis-backed idempotency store** — proposed as a lighter alternative to Postgres.
 Rejected: still solving a problem Stripe already solves, and adds an infrastructure
-dependency for no gain.
+dependency for no gain. **Do not introduce a local idempotency store of any kind —
+Stripe's native support covers all current payment paths.**
 
 **Keeping the table for non-Stripe operations** — we only have one payment path right
 now, so this was over-engineering for a hypothetical. If a second payment provider is
 ever added, the table can be reintroduced then.
 
-## Threads We Pulled
+## Key Discoveries
 
-Looked at whether Stripe's idempotency window (24 hours) was sufficient for our retry
-policy (retries within 6 hours). It is. Would need revisiting if retry window expands.
+**Does Stripe's idempotency window cover our retry policy?**
+→ Yes. Stripe's window is 24 hours; our retry policy retries within 6 hours. Safe.
+Would need revisiting if the retry window ever expands past 24 hours.
 
-## Open Questions
+**What does Stripe actually do when it receives a duplicate idempotency key?**
+→ Returns the original response without re-executing the charge. No side effects.
+This is the core reason the local table was redundant.
+
+## Open Questions & Next Steps
 
 - Do we want to log the `Idempotency-Key` values we send to Stripe for audit purposes,
-  or is Stripe's dashboard sufficient? Deferred — not a blocker.
+  or is Stripe's dashboard sufficient? Deferred — not a blocker for the current release.
+- No action items outstanding.
 
 ## Files Changed
 
-- `app/services/payment_processor.rb` — added `idempotency_key:` param to Stripe charge call
+- `app/services/payment_processor.rb` — added `idempotency_key:` param to Stripe charge call. [Constraint: key must be the incoming `stripe_event_id`, not a generated UUID — ensures replay safety.]
 - `app/models/idempotency_key.rb` — deleted
 - `db/migrate/20260518_create_idempotency_keys.rb` — deleted
 - `spec/services/payment_processor_spec.rb` — removed idempotency table fixtures
 ```
 
-Notice what this document does that the code and git history don't: it explains why the Redis alternative was rejected, and it records that Stripe's 24-hour idempotency window was explicitly checked against the retry policy. Six months from now, when someone wonders "did we ever consider a Redis cache here?" — this is where the answer lives.
+Notice what this document does that the code and git history don't: the Do Not constraint in Roads Not Taken tells a future session not to reintroduce a local store before it even starts thinking about the problem. The Key Discoveries section records that Stripe's 24-hour window was explicitly verified against the retry policy — not just assumed. Six months from now, when someone wonders "did we ever consider a Redis cache here?" — the answer is one grep away.
 
 **Scoped closing** — if you only want to capture one specific decision or topic rather than the full session:
 
