@@ -62,6 +62,16 @@ mkdir -p docs/sessions
 
 ## Step 4 — Write the document
 
+Before writing, reason through the session using SBAR-C as a completeness check:
+
+- **Situation** — what is the current state? What happened this session?
+- **Background** — what led to the key decisions? What made the alternatives worse?
+- **Assessment** — what did we figure out that we didn't know before?
+- **Recommendation** — what needs to happen next? What's unresolved or deferred?
+- **Contingency** — what assumptions did we make that, if they change, would reopen a closed decision? Embed these as conditionals in Roads Not Taken: *Do not X because Y — unless Z, in which case reconsider.*
+
+This reasoning does not produce additional sections. It surfaces content for the sections that follow.
+
 The document must include all of the following sections. Do not skip any. If a section has nothing to report, say so explicitly rather than omitting it — "nothing deferred" is more useful than a missing section.
 
 ```markdown
