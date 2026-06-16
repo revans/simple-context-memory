@@ -96,7 +96,7 @@ If the file cannot be found, say so and stop.
 Extract the query — everything after `search` in the argument. Then grep all session docs for keywords from the query to find candidate files:
 
 ```bash
-grep -ril "<keyword1>\|<keyword2>\|<keyword3>" docs/sessions/ 2>/dev/null
+grep -rilE "<keyword1>|<keyword2>|<keyword3>" docs/sessions/ 2>/dev/null
 ```
 
 Pull 2–4 keywords from the query. Cast wide — better to read a false-positive than to miss the relevant session. If grep returns no candidates, fall back to all session docs. Always delegate search to a subagent regardless of candidate count.

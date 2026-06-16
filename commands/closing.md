@@ -1,6 +1,6 @@
 ---
 name: Closing
-description: End-of-session archaeology document. Captures what was built, why, what was explored and rejected, and open questions. Saved to docs/sessions/ with a timestamp filename so future LLM sessions can trace how the codebase arrived at its current state. Accepts an optional scope argument to limit capture to a specific topic or decision from the session.
+description: End-of-session archaeology document. Captures a summary, what was built and why, alternatives rejected with forward Do-Not constraints, key discoveries as Q→A pairs, and open questions with next steps. Saved to docs/sessions/ with a timestamp filename so future sessions can continue without re-deriving context. Accepts an optional scope argument to limit capture to a specific topic.
 color: purple
 arguments:
   - scope (optional)
@@ -75,6 +75,12 @@ previous_session: {{filename of previous session, or null}}
 
 # Session: {{slug in title case}}
 
+## Summary
+
+{{2-3 sentences. What was this session about, what is the most important thing that
+changed, and what does the next session pick up? Write this as if it's the only thing
+a future session might read — enough to orient immediately without reading anything else.}}
+
 ## What We Did
 
 {{Concrete list of what was built, changed, or decided. Be specific — file paths,
@@ -94,26 +100,43 @@ from re-litigating settled questions.}}
 section — it's what won't appear in the code or git history. Be specific about what
 was proposed, what the argument for it was, and why it was set aside.
 
+End each entry with a bold constraint line stating the forward-binding rule:
+**Do not [X] because [Y].** This is what a future session needs to see before it
+starts reasoning about the problem — a guard rail, not just an explanation.
+
 If nothing was rejected, say so. If you're uncertain whether something was raised and
 rejected vs. never considered, say so.}}
 
-## Threads We Pulled
+## Key Discoveries
 
-{{Lines of thought that were explored during the session — even if they didn't produce
-a final decision. Design questions discussed, analogies used to reason about the problem,
-rabbit holes entered and exited. This is the thinking-out-loud record.}}
+{{Questions we didn't know the answer to at the start and figured out during the session.
+Format as question → answer pairs. Include:
+- Root causes traced ("why does X happen?" → "because Y")
+- Empirical findings from testing or research
+- Misconceptions corrected
+- Anything a future session would need to know so it doesn't re-discover it
 
-## Open Questions
+If nothing new was learned, say so.}}
 
-{{What was explicitly deferred, left unresolved, or flagged as "talk about this next time."
-Include anything the session ended without answering. If something is half-decided,
-note which half is settled and which isn't.}}
+## Open Questions & Next Steps
+
+{{What was explicitly deferred, left unresolved, flagged as "talk about this next time,"
+or suggested but not acted on. Include:
+- Unresolved questions or half-decisions (note which half is settled)
+- Action items identified but not tackled this session
+- Suggestions raised (by either party) that weren't followed up on
+- Review findings or potential issues noted but left for later
+
+If nothing is pending, say so explicitly.}}
 
 ## Files Changed
 
-{{List of files created or modified this session, with one line on what changed in each.
+{{List of files created or modified this session. For each file, record what changed
+AND any constraint or intent a future session needs to know before touching it again —
+specifically anything that looks like it could be safely reverted but shouldn't be.
+
 Format:
-- `path/to/file.md` — what changed
+- `path/to/file.md` — what changed. [Constraint if applicable: why this can't be undone / what to not change back.]
 }}
 
 ---

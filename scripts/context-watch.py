@@ -16,14 +16,14 @@ WARN_THRESHOLD  = 0.60   # 60% — first notice
 URGENT_THRESHOLD = 0.75  # 75% — run /closing now
 
 
-def find_current_session_jsonl():
-    """Find the most recently modified session JSONL across all projects.
-
-    Assumes the most recently active JSONL belongs to the current session.
-    If you run multiple Claude Code sessions simultaneously, this may return
-    a count from a different session — in that case, ignore the warning and
-    run /closing manually when the session feels long.
-    """
+def find_current_session_jsonl(hook_input):
+    # Prefer the transcript_path from the hook payload — exact and race-free.
+    path = hook_input.get("transcript_path")
+    if path and os.path.exists(path):
+        return path
+    # Fallback for environments where stdin payload is unavailable.
+    # Warning: this picks the most-recently-modified JSONL across all projects,
+    # which is wrong when multiple Claude sessions are active simultaneously.
     pattern = os.path.expanduser("~/.claude/projects/*/*.jsonl")
     files = glob.glob(pattern)
     if not files:
@@ -32,24 +32,20 @@ def find_current_session_jsonl():
 
 
 def get_last_input_tokens(path):
-    """Read the JSONL backwards to find the last assistant message with usage data."""
     try:
         with open(path, "rb") as f:
-            # Read chunks from the end to avoid loading the whole file
             f.seek(0, 2)
-            size = f.tell()
-            chunk_size = min(65536, size)
-            pos = size
+            pos = f.tell()
+            tail = b""  # partial line carried from the more-recent chunk
 
-            buf = b""
             while pos > 0:
-                pos = max(0, pos - chunk_size)
+                read_size = min(65536, pos)
+                pos -= read_size
                 f.seek(pos)
-                buf = f.read(chunk_size) + buf
-                lines = buf.split(b"\n")
+                lines = (f.read(read_size) + tail).split(b"\n")
+                tail = lines[0]  # may be partial — will be prepended on next iteration
 
-                # Check lines from the end
-                for line in reversed(lines):
+                for line in reversed(lines[1:]):
                     line = line.strip()
                     if not line:
                         continue
@@ -68,8 +64,22 @@ def get_last_input_tokens(path):
                     except (json.JSONDecodeError, KeyError):
                         continue
 
-                if pos == 0:
-                    break
+            # handle the very first line of the file
+            if tail.strip():
+                try:
+                    d = json.loads(tail.strip())
+                    if d.get("type") == "assistant":
+                        usage = d.get("message", {}).get("usage", {})
+                        if usage:
+                            total = (
+                                usage.get("input_tokens", 0)
+                                + usage.get("cache_read_input_tokens", 0)
+                                + usage.get("cache_creation_input_tokens", 0)
+                            )
+                            if total > 0:
+                                return total
+                except (json.JSONDecodeError, KeyError):
+                    pass
 
     except (OSError, IOError):
         pass
@@ -78,7 +88,13 @@ def get_last_input_tokens(path):
 
 
 def main():
-    path = find_current_session_jsonl()
+    hook_input = {}
+    try:
+        hook_input = json.load(sys.stdin)
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    path = find_current_session_jsonl(hook_input)
     if not path:
         return
 
