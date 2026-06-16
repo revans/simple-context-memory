@@ -59,6 +59,7 @@ your-project/
     └── commands/
         ├── opening.md
         └── closing.md
+        └── report.md
 ```
 
 **User-level (global)** — available in every project on your machine:
@@ -66,7 +67,8 @@ your-project/
 ~/.claude/
 └── commands/
     ├── opening.md
-    └── closing.md
+    ├── closing.md
+    └── report.md
 ```
 
 ### Steps
@@ -78,7 +80,14 @@ Install globally — these commands are useful in every project, not just one.
    git clone https://github.com/revans/simple-context-memory
    ```
 
-2. Copy the commands to your global Claude Code commands directory:
+2. Run the install script:
+   ```bash
+   bash simple-context-memory/init.sh
+   ```
+
+   This copies the commands to `~/.claude/commands/`, the hook scripts to `~/.claude/hooks/`, and checks whether the hooks are wired in `~/.claude/settings.json` — printing the required JSON snippet if not.
+
+   **Or install manually:**
    ```bash
    mkdir -p ~/.claude/commands
    cp simple-context-memory/commands/opening.md ~/.claude/commands/
@@ -86,7 +95,7 @@ Install globally — these commands are useful in every project, not just one.
    cp simple-context-memory/commands/report.md ~/.claude/commands/
    ```
 
-3. _(Optional)_ Install the compaction hooks for automatic session protection:
+3. _(Optional, manual only)_ Install the compaction hooks:
    ```bash
    mkdir -p ~/.claude/hooks
    cp simple-context-memory/scripts/context-watch.py ~/.claude/hooks/context-watch.py
