@@ -25,6 +25,9 @@ previous_session: {{most recent file from ls -t docs/sessions/*.md 2>/dev/null |
 
 # Session: {{slug in title case}}
 
+## Summary
+{{2-3 sentences: what this session was about, the most important thing that changed, and what the next session picks up.}}
+
 ## What We Did
 {{Specific things built, changed, or decided — file paths, function names, design choices}}
 
@@ -32,16 +35,23 @@ previous_session: {{most recent file from ls -t docs/sessions/*.md 2>/dev/null |
 {{Reasoning behind key decisions. What made the alternatives worse.}}
 
 ## Roads Not Taken
-{{Everything considered and rejected. What was proposed, argued for, and set aside. Most important section.}}
+{{Everything considered and rejected. What was proposed, argued for, and set aside.
+End each entry with: **Do not [X] because [Y].**}}
 
-## Threads We Pulled
-{{Lines of thought explored even without a final decision}}
+## Key Discoveries
+{{Questions answered this session. Format as question → answer pairs.
+Root causes traced, misconceptions corrected, empirical findings.}}
 
-## Open Questions
-{{What was explicitly deferred or left unresolved}}
+## Open Questions & Next Steps
+{{What was deferred, left unresolved, or suggested but not acted on. Include:
+- Unresolved questions or half-decisions
+- Action items not tackled this session
+- Suggestions raised but not followed up on}}
 
 ## Files Changed
-{{List of files created or modified, one line each}}
+{{List of files created or modified. For each: what changed + any constraint a future
+session needs before touching it again.
+- `path/to/file` — what changed. [Constraint: why this can't be safely reverted.]}}
 
 ---
 *Note: Written under compaction pressure. Sections marked [uncertain] reflect incomplete recall.*
