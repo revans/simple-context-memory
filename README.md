@@ -365,8 +365,32 @@ Commit both to your repo. The session history and the report together are the in
 
 ## Why this works
 
-A note on how Claude reads context: when Claude gets a 2,000-word session document, it doesn't just "know" everything in it equally. It treats recent sentences more heavily than earlier ones, and it weights things that look like explicit decisions over things that look like musings. The archaeology format plays into this — every section ends with something settled or something open, which Claude can slot directly into its working understanding.
+### Why `/closing` works
 
-Contrast this with dumping raw chat history or a massive project-state memory file: Claude sees a wall of text with no signal about what's load-bearing and what's background noise. The structured document does the compression work *before* it enters the context window.
+Think of a surgical shift handoff. When one surgeon hands off to another, they don't read the full patient chart — they write a one-page note: what changed on this shift, what decisions were made and why, what's still open. The incoming surgeon reads the note, not the chart.
 
-One session document ≈ one surgical handoff note. Surgical handoff notes are short. They exist because the alternative — reading the full chart — takes too long and buries the critical detail in noise. Same physics here.
+`/closing` is that note. The structured format — Summary, What We Did, Why We Did It This Way, Roads Not Taken, Key Discoveries, Open Questions — does the compression work *before* the document enters context. Each section signals to Claude what's load-bearing. The Do Not constraints in Roads Not Taken front-load the guard rails so a future session sees them before it starts reasoning about the problem.
+
+Contrast this with dumping raw chat history: Claude sees a wall of text with no signal about what matters. The structured document extracts the signal so Claude doesn't have to.
+
+### Why `/opening` works
+
+Reading a 2,000-word structured brief is not the same as reading raw history. Claude treats explicit decisions differently from musings — the archaeology format plays into this. Every section ends with something settled or something open, which Claude can slot directly into its working model of the project.
+
+For large loads (3+ session files), `/opening` delegates to a subagent. The subagent reads all the documents and returns a finished synthesis. The raw archaeology never enters your context window — only the distilled brief does. This keeps the main context clean for actual work.
+
+### Why `/report` works
+
+At scale, the problem shifts. One session document answers "what happened last time?" Thirty session documents answer a harder question: "what is the accumulated state of all deferred work and locked constraints across the entire project history?" You can't load thirty files every session.
+
+`/report` collapses that history into a single document: every still-open deferral, every Do Not constraint, each linked to its source session. The cursor mechanism (`last_session` in the frontmatter) means subsequent runs only process new sessions — you don't re-pay the synthesis cost on history already captured.
+
+### How they work together
+
+Each command operates at a different time horizon:
+
+- `/closing` — session to session. The shift handoff. Captures what happened before the context is gone.
+- `/opening` — note to context. Reads the handoff and orients the new session in seconds.
+- `/report` — history to current state. Collapses accumulated sessions into one load when individual files become too many to read.
+
+Together they mean no session starts cold and no decision gets re-litigated from scratch. The reasoning that was hard to arrive at the first time is preserved and surfaced automatically the next time it's relevant.
