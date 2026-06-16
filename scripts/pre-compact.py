@@ -36,7 +36,9 @@ previous_session: {{most recent file from ls -t docs/sessions/*.md 2>/dev/null |
 
 ## Roads Not Taken
 {{Everything considered and rejected. What was proposed, argued for, and set aside.
-End each entry with: **Do not [X] because [Y].**}}
+For each entry, ask: what would have to be true for this to have been the right call?
+End each entry with: **Do not [X] because [Y] — unless [Z], in which case reconsider.**
+If there is no realistic reversal condition, omit the unless clause.}}
 
 ## Key Discoveries
 {{Questions answered this session. Format as question → answer pairs.

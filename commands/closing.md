@@ -110,9 +110,14 @@ from re-litigating settled questions.}}
 section — it's what won't appear in the code or git history. Be specific about what
 was proposed, what the argument for it was, and why it was set aside.
 
+For each entry, ask: what would have to be true about the world for this to have been
+the right call instead? That answer becomes the conditional.
+
 End each entry with a bold constraint line stating the forward-binding rule:
-**Do not [X] because [Y].** This is what a future session needs to see before it
-starts reasoning about the problem — a guard rail, not just an explanation.
+**Do not [X] because [Y] — unless [Z], in which case reconsider.** This is what a
+future session needs to see before it starts reasoning about the problem — a guard
+rail, not just an explanation. If there is no realistic reversal condition, omit the
+unless clause.
 
 If nothing was rejected, say so. If you're uncertain whether something was raised and
 rejected vs. never considered, say so.}}
