@@ -310,6 +310,16 @@ This is the core reason the local table was redundant.
 
 Notice what this document does that the code and git history don't: the Do Not constraint in Roads Not Taken tells a future session not to reintroduce a local store before it even starts thinking about the problem. The Key Discoveries section records that Stripe's 24-hour window was explicitly verified against the retry policy — not just assumed. Six months from now, when someone wonders "did we ever consider a Redis cache here?" — the answer is one grep away.
 
+**Scoped closing** — if you only want to capture one specific decision or topic rather than the full session:
+
+```
+/closing webhook-auth-decision
+```
+
+This writes a focused document covering only the conversation around that topic, with a slug derived from your argument. Useful when a session covered multiple unrelated things and you only want to preserve one of them cleanly.
+
+---
+
 ### Generating a report
 
 Once sessions start accumulating, run:
@@ -327,16 +337,6 @@ The report is always one file — it overwrites on each run. The frontmatter tra
 ```
 
 Use `full` after a `/closing` that may have resolved items the report has as open, or any time you want a clean rebuild.
-
----
-
-**Scoped closing** — if you only want to capture one specific decision or topic rather than the full session:
-
-```
-/closing webhook-auth-decision
-```
-
-This writes a focused document covering only the conversation around that topic, with a slug derived from your argument. Useful when a session covered multiple unrelated things and you only want to preserve one of them cleanly.
 
 ---
 
