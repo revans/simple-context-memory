@@ -87,6 +87,8 @@ Install globally — these commands are useful in every project, not just one.
 
    This copies the commands to `~/.claude/commands/`, the hook scripts to `~/.claude/hooks/`, and checks whether the hooks are wired in `~/.claude/settings.json` — printing the required JSON snippet if not.
 
+   **Note:** existing files are overwritten without prompting. If you have customized your local copies of these commands, back them up before running.
+
    **Or install manually:**
    ```bash
    mkdir -p ~/.claude/commands
