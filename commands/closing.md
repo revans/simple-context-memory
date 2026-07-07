@@ -1,6 +1,6 @@
 ---
 name: Closing
-description: End-of-session archaeology document. Captures a summary, what was built and why, alternatives rejected with forward Do-Not constraints, key discoveries as Q→A pairs, and open questions with next steps. Saved to docs/sessions/ with a timestamp filename so future sessions can continue without re-deriving context. Accepts an optional scope argument to limit capture to a specific topic.
+description: End-of-session archaeology document. Captures a summary, what was built and why, alternatives rejected with forward Do-Not constraints, key discoveries as Q→A pairs, implicit assumptions made, where the agent struggled, and open questions with next steps. Saved to docs/sessions/ with a timestamp filename so future sessions can continue without re-deriving context. Accepts an optional scope argument to limit capture to a specific topic.
 color: purple
 arguments:
   - scope (optional)
@@ -70,7 +70,9 @@ Before writing, reason through the session using SBAR-C as a completeness check:
 - **Recommendation** — what needs to happen next? What's unresolved or deferred?
 - **Contingency** — what assumptions did we make that, if they change, would reopen a closed decision? Embed these as conditionals in Roads Not Taken: *Do not X because Y — unless Z, in which case reconsider.*
 
-This reasoning does not produce additional sections. It surfaces content for the sections that follow.
+Two of these five surface a different kind of signal than the rest — not what was decided, but how reliable what was produced actually is. **Assessment** should surface struggle, not just discoveries: what took multiple attempts, what was genuinely ambiguous, what got produced with lower confidence than the rest. **Contingency** surfaces two related but distinct things — assumptions tied to a reversible decision (embed as a conditional in the Do Not line, as above) *and* standalone implicit assumptions that were never explicitly decided at all, just filled in silently (surface these in Assumptions Made below, even when no decision hangs on them).
+
+This reasoning does not produce additional sections beyond the two named below. It surfaces content for the sections that follow.
 
 The document must include all of the following sections. Do not skip any. If a section has nothing to report, say so explicitly rather than omitting it — "nothing deferred" is more useful than a missing section.
 
@@ -132,6 +134,28 @@ Format as question → answer pairs. Include:
 - Anything a future session would need to know so it doesn't re-discover it
 
 If nothing new was learned, say so.}}
+
+## Assumptions Made
+
+{{Implicit choices filled in without explicit deliberation — distinct from Roads Not Taken,
+which covers alternatives that were actually named and considered before one was rejected.
+An assumption is a gap that got filled one way without anyone consciously choosing it: a
+default value picked, a scope boundary inferred, a format assumed compatible, a dependency
+assumed available. State each one plainly and note what would break if it turns out wrong.
+This is what lets a future reader audit a choice nobody flagged as a choice.
+
+If nothing was assumed beyond what's already explicit elsewhere in this document, say so.}}
+
+## Where the Agent Struggled
+
+{{Not a claim about the work — a confidence signal about it. Which specific parts of this
+session's output took multiple attempts, hit genuine ambiguity, or were produced with lower
+confidence than the rest, even though an answer was still delivered. Distinct from Key
+Discoveries (settled learnings) and Open Questions (deferred items still to resolve) — this
+flags where a future session or reviewer should apply extra scrutiny before building on top
+of what's here, even though it isn't literally unresolved or unknown.
+
+If nothing this session was genuinely difficult, say so.}}
 
 ## Open Questions & Next Steps
 

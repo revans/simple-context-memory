@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en" data-bp-theme="dark" data-bp-motion="draw">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- SEO: title tag — primary keyword "Simple Context Memory" in position 1, names the tool type, 50 chars -->
+  <title>Simple Context Memory — Claude Code slash commands</title>
+  <!-- SEO: meta description — 158 chars, lead with what/how/for whom, primary keyword in first 10 words -->
+  <meta name="description" content="Three Claude Code slash commands that prevent AI session amnesia — /opening, /closing, /report. The surgical shift handoff model: no re-litigating decisions.">
+
+  <!-- SEO: canonical URL — spec page path, trailing slash, no index.html -->
+  <link rel="canonical" href="https://robertrevans.com/specs/simple-context-memory/">
+
+  <!-- SEO: Open Graph — 6 tags for social sharing and AI crawler context -->
+  <meta property="og:title" content="Simple Context Memory — Claude Code slash commands">
+  <meta property="og:description" content="Three Claude Code slash commands that prevent AI session amnesia — /opening, /closing, /report. The surgical shift handoff model: no re-litigating decisions.">
+  <!-- og:image: PENDING — fill before deploy -->
+  <meta property="og:url" content="https://robertrevans.com/specs/simple-context-memory/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Robert Evans">
+
+  <!-- SEO: SoftwareApplication schema — this is a Claude Code plugin (runs on a computer) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Simple Context Memory",
+    "description": "A Claude Code plugin with three slash commands that give AI sessions structured, decision-focused memory — using a surgical shift handoff model so each session starts oriented, not cold.",
+    "url": "https://robertrevans.com/specs/simple-context-memory/",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "macOS, Linux, Windows",
+    "downloadUrl": "https://github.com/revans/simple-context-memory",
+    "author": {
+      "@type": "Person",
+      "@id": "https://robertrevans.com/#robert-evans",
+      "name": "Robert Evans",
+      "url": "https://robertrevans.com",
+      "jobTitle": "CTO & Systems Builder",
+      "sameAs": [
+        "https://github.com/revans",
+        "https://linkedin.com/in/robertrevans"
+      ]
+    },
+    "datePublished": "2026-06-28",
+    "dateModified": "2026-06-28"
+  }
+  </script>
+
+  <!-- SEO: FAQPage schema — 7 Q&A pairs extracted verbatim from page content -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is Simple Context Memory?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Three slash commands implement the shift handoff model surgeons use between operating shifts. Not a diary. Not a log. A focused note: what changed, what was decided, what was rejected, what's still open."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does /opening work?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Reads session archaeology documents from docs/sessions/ and gives you a structured brief: what the project currently is, what decisions are settled, what's pending, and what threads were live when you left off."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What does /closing capture?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Seven sections. Each one answers a question your future session will have. The code already shows you what was built. Only this document shows you why."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the Roads Not Taken section?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Everything considered but deliberately rejected. The most important section — it's what won't appear in code or git history. Each entry ends with a forward-binding Do Not constraint that a future session sees before it starts reasoning about the problem."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What does /report do?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "At 20+ sessions, the problem shifts. One session document answers \"what happened last time?\" Thirty session documents answer a harder question: \"what is the accumulated state of all deferred work and locked constraints across the entire project history?\""
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does automatic compaction protection work?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Three scripts work as a layered defense against compaction. The first gives you time to act. The second acts automatically if you don't. The third reorients you afterward."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Why does structured session memory work better than saving everything?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Most memory systems save everything. The reflex solution is to dump the whole context into files. But Claude loads it and re-litigates anyway — because it can't tell which of the forty remembered facts is the one that matters right now."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- The Point CSS — load order is critical: base → mood → brand -->
+  <link rel="stylesheet" href="../../../../the-point/assets/index.css">
+  <link rel="stylesheet" href="../../../../the-point/assets/moods/arctic.css">
+  <link rel="stylesheet" href="001.00-brand.css">
+</head>
+<body>
+
+<!-- ── Navigation ─────────────────────────────────────────────────── -->
+<nav class="bp-nav">
+  <div class="bp-container bp-nav-inner">
+    <a href="#" class="bp-nav-brand bp-font-mono" style="letter-spacing: 0;">simple-context-memory</a>
+    <ul class="bp-nav-links">
+      <li><a href="#commands" class="bp-nav-link">Commands</a></li>
+      <li><a href="#anatomy" class="bp-nav-link">Anatomy</a></li>
+      <li><a href="#why" class="bp-nav-link">Why it works</a></li>
+      <li><a href="#install" class="bp-nav-link">Install</a></li>
+    </ul>
+    <div class="bp-nav-actions">
+      <a href="https://github.com/revans/simple-context-memory" class="bp-btn bp-btn-outline bp-btn-sm" target="_blank" rel="noopener noreferrer">
+        GitHub ↗
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ───────────────────────────────────────────────────────── -->
+<section class="bp-hero bp-container">
+  <div class="bp-hero-eyebrow">Claude Code Plugin — Open Source</div>
+  <h1 class="bp-hero-title">
+    Claude wakes up with total amnesia<br>
+    <span class="bp-text-gradient">every session. Three commands fix it.</span>
+  </h1>
+  <p class="bp-hero-subtitle">
+    The project you've been building for three weeks. The decision you made Thursday about why you're not using Redis. The half-finished design from your last conversation. Gone — every time you open a new session.<br><br>
+    Three slash commands implement the shift handoff model surgeons use between operating shifts. Not a diary. Not a log. A focused note: what changed, what was decided, what was rejected, what's still open.
+  </p>
+  <div class="bp-hero-actions">
+    <a href="#install" class="bp-btn bp-btn-primary bp-btn-xl">Install in 60 seconds</a>
+    <a href="https://github.com/revans/simple-context-memory" class="bp-btn bp-btn-ghost bp-btn-xl" target="_blank" rel="noopener noreferrer">View on GitHub ↗</a>
+  </div>
+</section>
+
+<!-- ── Terminal Demo ──────────────────────────────────────────────── -->
+<section class="bp-section-sm">
+  <div class="bp-container bp-container-lg">
+    <div class="scm-terminal" role="presentation" aria-label="Terminal demonstration of /opening command">
+      <div class="scm-terminal-bar" aria-hidden="true">
+        <div class="scm-terminal-dot"></div>
+        <div class="scm-terminal-dot"></div>
+        <div class="scm-terminal-dot"></div>
+        <span class="scm-terminal-title">billing-api — claude code session</span>
+      </div>
+      <div class="scm-terminal-content">
+        <div><span class="scm-prompt">$ </span><span id="typewriter-line1" aria-live="polite"></span><span id="tw-cursor" class="scm-cursor" aria-hidden="true"></span></div>
+        <div id="terminal-output" style="display:none; margin-top: 12px;">
+          <div class="scm-output-muted">→ Reading session context...</div>
+          <div style="height:10px;"></div>
+          <div><span class="scm-output-success">✓</span> Session: <strong>Drop Idempotency Table</strong> <span class="scm-output-muted">· 2026-05-19</span></div>
+          <div style="height:10px;"></div>
+          <div><strong>Active state</strong></div>
+          <div class="scm-output-muted bp-mb-1">Removed the local idempotency_keys table. Switched to Stripe's native idempotency key support. The table was duplicating protection Stripe already provides for free.</div>
+          <div style="height:8px;"></div>
+          <div><strong>Live decisions — do not re-litigate</strong></div>
+          <div class="scm-output-muted">  · Stripe's 24h window covers our 6h retry policy. Verified.</div>
+          <div class="scm-output-muted">  · <span style="color: #EF9B4A;">Do not</span> introduce a local idempotency store — Stripe covers all current payment paths.</div>
+          <div style="height:8px;"></div>
+          <div><strong>Open</strong></div>
+          <div class="scm-output-muted">  · Log Stripe idempotency keys for audit? Deferred — not blocking release.</div>
+          <div style="height:14px;"></div>
+          <div class="scm-output-muted" style="font-size: 12px; border-top: 1px solid rgba(58,124,165,0.15); padding-top: 12px;">Context loaded from 1 session: <code style="color: var(--color-primary);">2026-05-19-1531-drop-idempotency-table.md</code></div>
+        </div>
+      </div>
+    </div>
+    <p class="bp-text-muted bp-mt-4" style="text-align: center; font-size: 13px; font-family: var(--font-mono);">
+      Run <code>/opening</code> at the start of any session. No cold start. No re-explaining.
+    </p>
+  </div>
+</section>
+
+<!-- ── Three Commands ─────────────────────────────────────────────── -->
+<section class="bp-section" id="commands">
+  <div class="bp-container">
+    <div class="bp-section-header">
+      <span class="bp-section-label">The System</span>
+      <h2 class="bp-section-title">Three commands. Three time horizons.</h2>
+      <p class="bp-section-subtitle">Each command solves a different scale of the same problem. Together, no session starts cold and no decision gets re-litigated from scratch.</p>
+    </div>
+
+    <div class="scm-tabs" role="tablist" aria-label="Command reference">
+      <button class="scm-tab active" data-tab="opening" role="tab" aria-selected="true" aria-controls="panel-opening">/opening</button>
+      <button class="scm-tab" data-tab="closing" role="tab" aria-selected="false" aria-controls="panel-closing">/closing</button>
+      <button class="scm-tab" data-tab="report" role="tab" aria-selected="false" aria-controls="panel-report">/report</button>
+    </div>
+
+    <!-- /opening panel -->
+    <div class="scm-tab-panel active" id="panel-opening" role="tabpanel">
+      <div class="bp-split bp-split-40-60" style="gap: 48px;">
+        <div>
+          <div class="bp-mb-4 scm-panel-label">/opening</div>
+          <h3 class="scm-panel-title">Load context at the start of a session</h3>
+          <p class="scm-panel-body bp-mb-4">Reads session archaeology documents from <code>docs/sessions/</code> and gives you a structured brief: what the project currently is, what decisions are settled, what's pending, and what threads were live when you left off.</p>
+          <p class="scm-panel-body">Think of it like reading the previous surgeon's handoff note before you scrub in. You don't read the patient's full chart — you read what changed on the last shift and what's still unresolved.</p>
+          <div class="scm-insight bp-mt-6">
+            <p class="scm-insight-note">When 3+ files need to be read, delegates to a subagent — raw archaeology never enters your context window. Only the distilled brief does. The main context stays clean for actual work.</p>
+          </div>
+        </div>
+        <div>
+          <div class="scm-panel-col-header">Modes</div>
+          <ul class="scm-mode-list">
+            <li><span class="scm-mode-cmd">/opening</span><span class="scm-mode-desc">Last session (default)</span></li>
+            <li><span class="scm-mode-cmd">/opening 2</span><span class="scm-mode-desc">Last N sessions</span></li>
+            <li><span class="scm-mode-cmd">/opening today</span><span class="scm-mode-desc">All sessions from today</span></li>
+            <li><span class="scm-mode-cmd">/opening yesterday</span><span class="scm-mode-desc">All sessions from yesterday</span></li>
+            <li><span class="scm-mode-cmd">/opening last-week</span><span class="scm-mode-desc">Sessions from the past 7 days</span></li>
+            <li><span class="scm-mode-cmd">/opening all</span><span class="scm-mode-desc">Every session — full arc</span></li>
+            <li><span class="scm-mode-cmd">/opening summary</span><span class="scm-mode-desc">Full arc as narrative ("how did we get here?")</span></li>
+            <li><span class="scm-mode-cmd">/opening search why...</span><span class="scm-mode-desc">Search history to answer a specific question</span></li>
+            <li><span class="scm-mode-cmd">/opening file path/to/doc</span><span class="scm-mode-desc">Load a specific session file</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- /closing panel -->
+    <div class="scm-tab-panel" id="panel-closing" role="tabpanel">
+      <div class="bp-split bp-split-40-60" style="gap: 48px;">
+        <div>
+          <div class="bp-mb-4 scm-panel-label">/closing</div>
+          <h3 class="scm-panel-title">Write the handoff before the context is gone</h3>
+          <p class="scm-panel-body bp-mb-4">Claude Code compacts the context window when it fills up. Compaction is lossy — it summarizes rather than preserves. Once it happens, the fine-grained reasoning about <em>why</em> decisions were made is gone.</p>
+          <p class="scm-panel-body bp-mb-4">Run <code>/closing</code> before that happens. Think of it like saving a document: you don't wait until your computer crashes. If the session has been long, run it while the context is still intact, then keep going.</p>
+          <p class="scm-panel-body">Use <code>/closing [scope]</code> to capture a single decision or topic rather than the full session — useful when a session covered multiple unrelated things and you only want to preserve one cleanly.</p>
+        </div>
+        <div>
+          <div class="scm-panel-col-header">SBAR-C reasoning frame (applied before writing)</div>
+          <ul class="scm-mode-list">
+            <li><span class="scm-mode-cmd" style="min-width: 130px;">Situation</span><span class="scm-mode-desc">What is the current state?</span></li>
+            <li><span class="scm-mode-cmd" style="min-width: 130px;">Background</span><span class="scm-mode-desc">What led to the key decisions? What made alternatives worse?</span></li>
+            <li><span class="scm-mode-cmd" style="min-width: 130px;">Assessment</span><span class="scm-mode-desc">What did we figure out that we didn't know before?</span></li>
+            <li><span class="scm-mode-cmd" style="min-width: 130px;">Recommendation</span><span class="scm-mode-desc">What needs to happen next? What's unresolved?</span></li>
+            <li><span class="scm-mode-cmd" style="min-width: 130px;">Contingency</span><span class="scm-mode-desc">What assumptions, if they change, reopen a closed decision?</span></li>
+          </ul>
+          <div class="scm-insight bp-mt-6">
+            <p class="scm-insight-note">SBAR-C doesn't produce extra sections — it surfaces content for the sections that already exist, and catches contingencies before they get buried. A contingency lands as a conditional in the Do Not line: <em>Do not X because Y — unless Z, in which case reconsider.</em></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- /report panel -->
+    <div class="scm-tab-panel" id="panel-report" role="tabpanel">
+      <div class="bp-split bp-split-40-60" style="gap: 48px;">
+        <div>
+          <div class="bp-mb-4 scm-panel-label">/report</div>
+          <h3 class="scm-panel-title">Collapse 30 sessions into one current state</h3>
+          <p class="scm-panel-body bp-mb-4">At 20+ sessions, the problem shifts. One session document answers "what happened last time?" Thirty session documents answer a harder question: "what is the accumulated state of all deferred work and locked constraints across the entire project history?"</p>
+          <p class="scm-panel-body">Loading the report plus 2-3 most recent sessions gives the same orientation as loading everything — with a fraction of the token cost. The cursor mechanism (<code>last_session</code> in frontmatter) means subsequent runs only process new sessions.</p>
+        </div>
+        <div>
+          <div class="scm-panel-col-header">Modes</div>
+          <ul class="scm-mode-list bp-mb-6">
+            <li><span class="scm-mode-cmd">/report</span><span class="scm-mode-desc">Incremental — only processes sessions since last run</span></li>
+            <li><span class="scm-mode-cmd">/report full</span><span class="scm-mode-desc">Rebuild from every session (ignore the cursor)</span></li>
+          </ul>
+          <div class="scm-panel-col-header">Report output</div>
+          <ul class="scm-mode-list">
+            <li><span class="scm-mode-cmd" style="min-width: 180px;">Open Deferrals</span><span class="scm-mode-desc">Every unresolved question, linked to source session</span></li>
+            <li><span class="scm-mode-cmd" style="min-width: 180px;">Do Not Constraints</span><span class="scm-mode-desc">Every guard rail accumulated, each linked to its origin</span></li>
+          </ul>
+          <div class="scm-insight bp-mt-6">
+            <p class="scm-insight-note">Run <code>/report full</code> after a <code>/closing</code> that may have resolved items the report has as open, or any time you want a clean rebuild from scratch.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── Session Anatomy ─────────────────────────────────────────────── -->
+<section class="bp-section bp-section-dark" id="anatomy">
+  <div class="bp-container">
+    <div class="bp-section-header">
+      <span class="bp-section-label">Session Anatomy</span>
+      <h2 class="bp-section-title">What /closing captures that git doesn't</h2>
+      <p class="bp-section-subtitle">Seven sections. Each one answers a question your future session will have. The code already shows you what was built. Only this document shows you why.</p>
+    </div>
+
+    <div class="scm-accordion" role="list">
+
+      <div class="scm-accordion-item" role="listitem">
+        <div class="scm-accordion-header" onclick="toggleAccordion(this)" role="button" aria-expanded="false" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')toggleAccordion(this)">
+          <span class="scm-accordion-section-num">01</span>
+          <span class="scm-accordion-title-text">Summary</span>
+          <span class="scm-accordion-arrow" aria-hidden="true">▼</span>
+        </div>
+        <div class="scm-accordion-body">
+          <p>2-3 sentences. What was this session about, what is the most important thing that changed, and what does the next session pick up? Written to orient in ten seconds without reading anything else.</p>
+          <pre>Removed the local idempotency table and switched to Stripe's native idempotency
+key support. The table was duplicating protection Stripe already provides for
+free. Next session: decide whether to log the Stripe idempotency keys we send
+for audit purposes.</pre>
+        </div>
+      </div>
+
+      <div class="scm-accordion-item" role="listitem">
+        <div class="scm-accordion-header" onclick="toggleAccordion(this)" role="button" aria-expanded="false" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')toggleAccordion(this)">
+          <span class="scm-accordion-section-num">02</span>
+          <span class="scm-accordion-title-text">What We Did</span>
+          <span class="scm-accordion-arrow" aria-hidden="true">▼</span>
+        </div>
+        <div class="scm-accordion-body">
+          <p>Concrete list of what was built, changed, or decided. File paths, function names, design choices. Not "we improved the flow" — exactly what changed and where.</p>
+          <pre>- Removed the `idempotency_keys` table and `IdempotencyKey` model entirely
+- Switched to Stripe's built-in Idempotency-Key header on all POST requests
+  to Stripe — passed directly from the incoming webhook payload's stripe_event_id
+- Updated `app/services/payment_processor.rb` to pass key on charge creation
+- Removed the `20260518_create_idempotency_keys.rb` migration (rolled back)</pre>
+        </div>
+      </div>
+
+      <div class="scm-accordion-item" role="listitem">
+        <div class="scm-accordion-header" onclick="toggleAccordion(this)" role="button" aria-expanded="false" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')toggleAccordion(this)">
+          <span class="scm-accordion-section-num">03</span>
+          <span class="scm-accordion-title-text">Why We Did It This Way</span>
+          <span class="scm-accordion-arrow" aria-hidden="true">▼</span>
+        </div>
+        <div class="scm-accordion-body">
+          <p>The reasoning behind the key decisions. Not just what was chosen but why the alternatives were worse. The section that prevents future sessions from re-litigating settled questions.</p>
+          <pre>We were maintaining a local idempotency table to prevent double-charging on
+retried webhooks. Stripe already does this natively — passing the same
+`Idempotency-Key` header returns the original response without re-executing
+the charge. Our table was duplicating protection Stripe provides for free
+and adding a write on every payment path. Deleting it was the right call.</pre>
+        </div>
+      </div>
+
+      <div class="scm-accordion-item" role="listitem">
+        <div class="scm-accordion-header" onclick="toggleAccordion(this)" role="button" aria-expanded="false" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')toggleAccordion(this)">
+          <span class="scm-accordion-section-num">04</span>
+          <span class="scm-accordion-title-text">Roads Not Taken</span>
+          <span class="scm-accordion-arrow" aria-hidden="true">▼</span>
+        </div>
+        <div class="scm-accordion-body">
+          <p>Everything considered but deliberately rejected. <strong>The most important section</strong> — it's what won't appear in code or git history. Each entry ends with a forward-binding <strong>Do Not</strong> constraint that a future session sees before it starts reasoning about the problem.</p>
+          <div class="scm-do-not">
+            <span class="scm-do-not-label">Do Not Constraint — forward-binding guard rail</span>
+            <strong class="scm-warning">Redis-backed idempotency store</strong> — proposed as a lighter alternative to Postgres. Rejected: still solving a problem Stripe already solves, and adds an infrastructure dependency for no gain.<br><br>
+            <strong>Do not introduce a local idempotency store of any kind — Stripe's native support covers all current payment paths — unless a second payment provider is added, in which case reconsider.</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="scm-accordion-item" role="listitem">
+        <div class="scm-accordion-header" onclick="toggleAccordion(this)" role="button" aria-expanded="false" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')toggleAccordion(this)">
+          <span class="scm-accordion-section-num">05</span>
+          <span class="scm-accordion-title-text">Key Discoveries</span>
+          <span class="scm-accordion-arrow" aria-hidden="true">▼</span>
+        </div>
+        <div class="scm-accordion-body">
+          <p>Questions answered during the session, as Q→A pairs. Root causes traced, misconceptions corrected. What a future session needs to know so it doesn't re-discover it.</p>
+          <pre><strong class="scm-strong">Does Stripe's idempotency window cover our retry policy?</strong>
+→ Yes. Stripe's window is 24 hours; our policy retries within 6 hours. Safe.
+  Would need revisiting if the retry window ever expands past 24 hours.
+
+<strong class="scm-strong">What does Stripe actually do with a duplicate idempotency key?</strong>
+→ Returns the original response without re-executing the charge. No side effects.
+  This is the core reason the local table was redundant.</pre>
+        </div>
+      </div>
+
+      <div class="scm-accordion-item" role="listitem">
+        <div class="scm-accordion-header" onclick="toggleAccordion(this)" role="button" aria-expanded="false" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')toggleAccordion(this)">
+          <span class="scm-accordion-section-num">06</span>
+          <span class="scm-accordion-title-text">Open Questions &amp; Next Steps</span>
+          <span class="scm-accordion-arrow" aria-hidden="true">▼</span>
+        </div>
+        <div class="scm-accordion-body">
+          <p>What was explicitly deferred, left unresolved, flagged for next time, or suggested but not acted on. Action items, half-decisions, and review findings noted for later.</p>
+          <pre>- Do we want to log the `Idempotency-Key` values we send to Stripe for audit
+  purposes, or is Stripe's dashboard sufficient? Deferred — not a blocker for
+  the current release.
+- No action items outstanding.</pre>
+        </div>
+      </div>
+
+      <div class="scm-accordion-item" role="listitem">
+        <div class="scm-accordion-header" onclick="toggleAccordion(this)" role="button" aria-expanded="false" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')toggleAccordion(this)">
+          <span class="scm-accordion-section-num">07</span>
+          <span class="scm-accordion-title-text">Files Changed</span>
+          <span class="scm-accordion-arrow" aria-hidden="true">▼</span>
+        </div>
+        <div class="scm-accordion-body">
+          <p>What changed and where, plus any constraint a future session needs before touching that file again. Specifically anything that looks like it could be safely reverted but shouldn't be.</p>
+          <pre>- `app/services/payment_processor.rb` — added idempotency_key: param to charge.
+  [Constraint: key must be the incoming stripe_event_id, not a generated UUID —
+   ensures replay safety.]
+- `app/models/idempotency_key.rb` — deleted
+- `db/migrate/20260518_create_idempotency_keys.rb` — deleted
+- `spec/services/payment_processor_spec.rb` — removed idempotency table fixtures</pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── Roads Not Taken — focus section ───────────────────────────── -->
+<section class="bp-section">
+  <div class="bp-container bp-container-lg">
+    <div class="bp-split bp-split-40-60" style="gap: 48px; align-items: start;">
+      <div>
+        <span class="bp-section-label">Roads Not Taken</span>
+        <h2 class="scm-section-mono-title">The guard rail a future session sees before it starts reasoning</h2>
+        <p class="scm-panel-body bp-mb-4">Six months from now, when someone wonders "did we ever consider a Redis cache here?" — the answer is one grep away.</p>
+        <p class="scm-panel-body bp-mb-4">The reversal condition — <em>unless Z, in which case reconsider</em> — makes it a living constraint, not a dead rule. The guard rail carries its own expiry condition.</p>
+        <p class="scm-panel-body">This is the section that preserves the reasoning that was hard to arrive at the first time. Without it, every new session starts from scratch on problems already solved.</p>
+      </div>
+      <div>
+        <div class="scm-terminal">
+          <div class="scm-terminal-bar" aria-hidden="true">
+            <div class="scm-terminal-dot"></div>
+            <div class="scm-terminal-dot"></div>
+            <div class="scm-terminal-dot"></div>
+            <span class="scm-terminal-title">billing-api · Roads Not Taken</span>
+          </div>
+          <div class="scm-terminal-content" style="min-height: auto;">
+            <div class="scm-output-muted" style="font-size: 11px; margin-bottom: 14px;">## Roads Not Taken</div>
+            <div style="margin-bottom: 16px; line-height: 1.7;"><strong class="scm-warning">Redis-backed idempotency store</strong> — proposed as a lighter alternative to Postgres. Rejected: still solving a problem Stripe already solves, adds an infrastructure dependency for no gain.</div>
+            <div style="margin-bottom: 16px; line-height: 1.7;"><strong class="scm-warning">Keeping the table for non-Stripe operations</strong> — we only have one payment path right now. Over-engineering for a hypothetical. If a second provider is ever added, the table can be reintroduced then.</div>
+            <div class="scm-do-not">
+              <span class="scm-do-not-label">Forward-binding constraint</span>
+              Do not introduce a local idempotency store of any kind — Stripe's native support covers all current payment paths — <em>unless a second payment provider is added, in which case reconsider.</em>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Compaction Hooks ────────────────────────────────────────────── -->
+<section class="bp-section" style="background-color: var(--color-bg-secondary);">
+  <div class="bp-container">
+    <div class="bp-section-header">
+      <span class="bp-section-label">Hooks</span>
+      <h2 class="bp-section-title">Automatic protection when you forget</h2>
+      <p class="bp-section-subtitle">Three scripts work as a layered defense against compaction. The first gives you time to act. The second acts automatically if you don't. The third reorients you afterward.</p>
+    </div>
+
+    <div class="bp-grid bp-grid-3">
+
+      <div class="bp-card bp-card-hover bp-animate-draw">
+        <div class="bp-card-header">
+          <div class="scm-card-hook-label">UserPromptSubmit</div>
+          <div class="bp-card-title bp-font-mono">context-watch.py</div>
+        </div>
+        <div class="bp-card-body">
+          <p class="bp-card-description bp-mb-3">Warns at 60% and 75% context fill — early notice to run <code>/closing</code> manually. Reads the actual JSONL transcript to calculate context usage precisely.</p>
+          <p class="bp-card-description scm-card-note">The <code>CONTEXT_WINDOW</code> constant defaults to 200,000 (claude-sonnet-4-6). Update it for other models.</p>
+        </div>
+      </div>
+
+      <div class="bp-card bp-card-hover bp-animate-draw">
+        <div class="bp-card-header">
+          <div class="scm-card-hook-label">PreCompact</div>
+          <div class="bp-card-title bp-font-mono">pre-compact.py</div>
+        </div>
+        <div class="bp-card-body">
+          <p class="bp-card-description bp-mb-3">Safety net: prints the full session document format as an instruction immediately before compaction runs. Claude writes the archaeology file before compaction proceeds.</p>
+          <p class="bp-card-description scm-card-note">Fires even if you forgot to run <code>/closing</code>. The document is written before the context is compressed.</p>
+        </div>
+      </div>
+
+      <div class="bp-card bp-card-hover bp-animate-draw">
+        <div class="bp-card-header">
+          <div class="scm-card-hook-label">PostCompact</div>
+          <div class="bp-card-title bp-font-mono">post-compact.py</div>
+        </div>
+        <div class="bp-card-body">
+          <p class="bp-card-description bp-mb-3">After compaction, reads <code>cwd</code> from the hook payload, checks <code>docs/sessions/</code> for the most recently written file, names it, and prompts you to run <code>/opening</code>.</p>
+          <p class="bp-card-description scm-card-note">If no session file exists, tells you to run <code>/closing</code> immediately to capture what remains in the compressed context.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── Why It Works ────────────────────────────────────────────────── -->
+<section class="bp-section" id="why">
+  <div class="bp-container">
+    <div class="bp-section-header">
+      <span class="bp-section-label">Why It Works</span>
+      <h2 class="bp-section-title">Three layers. Three time horizons. One problem.</h2>
+      <p class="bp-section-subtitle">Each command operates at a different scale. Together they cover the full lifecycle from a single session to a project's entire decision history.</p>
+    </div>
+
+    <div class="bp-steps bp-steps-3">
+      <div class="bp-step" data-step="01">
+        <div class="bp-step-number">/closing</div>
+        <div class="bp-step-title">Session → note</div>
+        <p class="bp-step-body">The shift handoff. Before the context window fills. The structured format — seven named sections, each signaling what's load-bearing — does the compression work before the document enters context. Claude doesn't figure out what matters; the format already told it.</p>
+      </div>
+      <div class="bp-step" data-step="02">
+        <div class="bp-step-number">/opening</div>
+        <div class="bp-step-title">Note → context</div>
+        <p class="bp-step-body">Reads the handoff and orients the new session. Claude treats explicit decisions differently from musings — the archaeology format plays into this. Every section ends with something settled or something open, which Claude slots directly into its working model of the project.</p>
+      </div>
+      <div class="bp-step" data-step="03">
+        <div class="bp-step-number">/report</div>
+        <div class="bp-step-title">History → current state</div>
+        <p class="bp-step-body">At 20+ sessions, the problem shifts. The report collapses accumulated history into one document: every still-open deferral, every Do Not constraint, each linked to its source. Subsequent runs only process new sessions — you don't re-pay the synthesis cost on history already captured.</p>
+      </div>
+    </div>
+
+    <div style="border-top: 1px solid rgba(58,124,165,0.15); margin-top: 48px; padding-top: 40px;">
+      <div class="bp-split bp-split-33-67" style="gap: 48px;">
+        <div>
+          <span class="bp-section-label">The core insight</span>
+        </div>
+        <div>
+          <p class="scm-insight-lead">Most memory systems save everything. The reflex solution is to dump the whole context into files. But Claude loads it and re-litigates anyway — because it can't tell which of the forty remembered facts is the one that matters right now.</p>
+          <p class="scm-insight-body">The archaeology format extracts the signal so Claude doesn't have to. Each section tells Claude what role the content plays — not just what it says. Contrast this with raw chat history: Claude sees a wall of text with no signal about what matters. The structured document does the compression work <em>before</em> the document enters context.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── Installation ────────────────────────────────────────────────── -->
+<section class="bp-section-lg bp-section-dark" id="install">
+  <div class="bp-container bp-container-md">
+    <div class="bp-section-header">
+      <span class="bp-section-label">Installation</span>
+      <h2 class="bp-section-title">One command. Works in every project.</h2>
+      <p class="bp-section-subtitle">Install globally — these commands are useful in every project, not just one. Claude Code picks up .md files in commands/ directories automatically. No config, no restart.</p>
+    </div>
+
+    <!-- Step 1 -->
+    <div class="bp-mb-8">
+      <div class="scm-install-step-label">Step 1 — Clone</div>
+      <div class="scm-copy-container">
+        <code id="cmd-clone">git clone https://github.com/revans/simple-context-memory</code>
+        <button class="scm-copy-btn" onclick="copyToClipboard('cmd-clone', this)" aria-label="Copy clone command">Copy</button>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="bp-mb-8">
+      <div class="scm-install-step-label">Step 2 — Install</div>
+      <div class="scm-copy-container">
+        <code id="cmd-install">bash simple-context-memory/init.sh</code>
+        <button class="scm-copy-btn" onclick="copyToClipboard('cmd-install', this)" aria-label="Copy install command">Copy</button>
+      </div>
+      <p class="scm-card-note bp-mt-3" style="line-height: 1.6;">
+        Copies commands to <code>~/.claude/commands/</code> and hook scripts to <code>~/.claude/hooks/</code>. Prints the settings.json snippet for hook wiring if not already configured.
+      </p>
+      <p style="font-size: 13px; margin-top: 8px; line-height: 1.6;" class="scm-warning">
+        ⚠ Existing files are overwritten without prompting. Back up customized copies before running.
+      </p>
+    </div>
+
+    <!-- Step 3 — hooks settings -->
+    <div class="bp-mb-8">
+      <div class="scm-install-step-label">Step 3 — Wire hooks in ~/.claude/settings.json (recommended)</div>
+      <div class="scm-terminal">
+        <div class="scm-terminal-bar" aria-hidden="true">
+          <div class="scm-terminal-dot"></div>
+          <div class="scm-terminal-dot"></div>
+          <div class="scm-terminal-dot"></div>
+          <span class="scm-terminal-title">~/.claude/settings.json</span>
+        </div>
+        <div class="scm-terminal-content" style="min-height: auto; font-size: 12px;">
+          <pre style="color: rgba(255,255,255,0.72);">{
+  "hooks": {
+    "UserPromptSubmit": [{
+      "hooks": [{ "type": "command",
+        "command": "python3 ~/.claude/hooks/context-watch.py" }]
+    }],
+    "PreCompact": [{
+      "hooks": [{ "type": "command",
+        "command": "python3 ~/.claude/hooks/pre-compact.py" }]
+    }],
+    "PostCompact": [{
+      "hooks": [{ "type": "command",
+        "command": "python3 ~/.claude/hooks/post-compact.py" }]
+    }]
+  }
+}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manual / project-level -->
+    <div>
+      <div class="scm-install-step-label">Project-level only (instead of global)</div>
+      <div class="scm-copy-container">
+        <code id="cmd-project">cp simple-context-memory/commands/*.md your-project/.claude/commands/</code>
+        <button class="scm-copy-btn" onclick="copyToClipboard('cmd-project', this)" aria-label="Copy project-level install command">Copy</button>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── CTA ─────────────────────────────────────────────────────────── -->
+<section class="bp-section">
+  <div class="bp-container bp-container-sm" style="text-align: center;">
+    <div class="bp-hero-eyebrow">Ready?</div>
+    <h2 class="scm-cta-title">No session starts cold.<br>No decision gets re-litigated.</h2>
+    <p class="scm-cta-body" style="line-height: 1.7; max-width: 420px; margin: 0 auto 36px;">Three commands. Five minutes to install. Every session after that starts oriented instead of asking "wait, where were we?"</p>
+    <div class="bp-flex bp-justify-center bp-gap-4" style="flex-wrap: wrap;">
+      <a href="https://github.com/revans/simple-context-memory" class="bp-btn bp-btn-primary bp-btn-lg" target="_blank" rel="noopener noreferrer">View on GitHub ↗</a>
+      <a href="#install" class="bp-btn bp-btn-outline bp-btn-lg">Install now</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ──────────────────────────────────────────────────────── -->
+<footer class="bp-footer">
+  <div class="bp-container">
+    <div class="bp-footer-grid">
+      <div>
+        <div class="bp-footer-brand-name bp-font-mono">simple-context-memory</div>
+        <p class="bp-footer-brand-desc">Claude Code slash commands for structured session archaeology. MIT License. Built by <a href="https://robertrevans.com" class="bp-footer-link" target="_blank" rel="noopener noreferrer">Robert Evans</a>.</p>
+      </div>
+      <div>
+        <div class="bp-footer-col-title">Commands</div>
+        <ul class="bp-footer-links">
+          <li><a href="#commands" class="bp-footer-link">/opening</a></li>
+          <li><a href="#commands" class="bp-footer-link">/closing</a></li>
+          <li><a href="#commands" class="bp-footer-link">/report</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="bp-footer-col-title">Resources</div>
+        <ul class="bp-footer-links">
+          <li><a href="https://github.com/revans/simple-context-memory" class="bp-footer-link" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+          <li><a href="#anatomy" class="bp-footer-link">Session anatomy</a></li>
+          <li><a href="#install" class="bp-footer-link">Installation</a></li>
+          <li><a href="https://github.com/revans/simple-context-memory/blob/master/LICENSE" class="bp-footer-link" target="_blank" rel="noopener noreferrer">MIT License</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="bp-footer-bottom">
+      <span class="bp-footer-copy">© 2026 Robert Evans</span>
+      <!-- SEO: publication date — visible freshness signal for AI extraction and human context -->
+      <time datetime="2026-06-28">Published June 2026</time>
+    </div>
+  </div>
+</footer>
+
+<!-- ── Anime.js ────────────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/animejs@4/lib/anime.min.js" integrity="sha384-EjiE/2cohA+NrIcthA3J/IrlvVYkoPZfJNgOnR15AHAoFHBht0umk1OmRhtjt1SL" crossorigin="anonymous"></script>
+
+<script>
+/* =================================================================
+   Simple Context Memory — Page Interactions
+   All animations respect prefers-reduced-motion.
+================================================================= */
+
+var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ── Typewriter terminal demo ──────────────────────────────────── */
+(function () {
+  var line1El = document.getElementById('typewriter-line1');
+  var outputEl = document.getElementById('terminal-output');
+  var cursorEl = document.getElementById('tw-cursor');
+
+  if (!line1El || !outputEl) return;
+
+  var cmd = '/opening';
+  var idx = 0;
+
+  if (reduceMotion) {
+    line1El.textContent = cmd;
+    cursorEl.style.display = 'none';
+    outputEl.style.display = 'block';
+    return;
+  }
+
+  function typeNext() {
+    if (idx < cmd.length) {
+      line1El.textContent += cmd[idx];
+      idx++;
+      setTimeout(typeNext, 55 + Math.random() * 45);
+    } else {
+      setTimeout(function () {
+        cursorEl.style.display = 'none';
+        outputEl.style.display = 'block';
+        outputEl.style.opacity = '0';
+        if (typeof anime !== 'undefined') {
+          anime({ targets: outputEl, opacity: [0, 1], duration: 700, easing: 'easeOutQuart' });
+        } else {
+          outputEl.style.opacity = '1';
+        }
+      }, 500);
+    }
+  }
+
+  setTimeout(typeNext, 1200);
+})();
+
+/* ── Tab switcher ─────────────────────────────────────────────── */
+(function () {
+  var tabs   = document.querySelectorAll('.scm-tab');
+  var panels = document.querySelectorAll('.scm-tab-panel');
+
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      var targetId = 'panel-' + this.dataset.tab;
+
+      tabs.forEach(function (t) {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+      });
+      panels.forEach(function (p) { p.classList.remove('active'); });
+
+      this.classList.add('active');
+      this.setAttribute('aria-selected', 'true');
+
+      var panel = document.getElementById(targetId);
+      if (!panel) return;
+      panel.classList.add('active');
+
+      if (!reduceMotion && typeof anime !== 'undefined') {
+        anime({ targets: panel, opacity: [0, 1], translateY: [10, 0], duration: 260, easing: 'easeOutQuart' });
+      }
+    });
+  });
+})();
+
+/* ── Accordion ────────────────────────────────────────────────── */
+function toggleAccordion(header) {
+  var body   = header.nextElementSibling;
+  var isOpen = header.classList.contains('open');
+
+  document.querySelectorAll('.scm-accordion-header').forEach(function (h) {
+    h.classList.remove('open');
+    h.setAttribute('aria-expanded', 'false');
+    var b = h.nextElementSibling;
+    if (b) b.classList.remove('open');
+  });
+
+  if (!isOpen) {
+    header.classList.add('open');
+    header.setAttribute('aria-expanded', 'true');
+    body.classList.add('open');
+
+    if (!reduceMotion && typeof anime !== 'undefined') {
+      anime({ targets: body, opacity: [0, 1], translateY: [-6, 0], duration: 230, easing: 'easeOutQuart' });
+    }
+  }
+}
+
+/* ── Copy to clipboard ────────────────────────────────────────── */
+function copyToClipboard(elId, btn) {
+  var el   = document.getElementById(elId);
+  var text = el ? el.textContent.trim() : '';
+  var orig = btn.textContent;
+
+  function onCopied() {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function () {
+      btn.textContent = orig;
+      btn.classList.remove('copied');
+    }, 2000);
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(onCopied).catch(function () { fallbackCopy(text, onCopied); });
+  } else {
+    fallbackCopy(text, onCopied);
+  }
+}
+
+function fallbackCopy(text, cb) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity  = '0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try { document.execCommand('copy'); cb(); } catch (e) {}
+  document.body.removeChild(ta);
+}
+
+/* ── Scroll-triggered section reveals ────────────────────────── */
+if (!reduceMotion && typeof IntersectionObserver !== 'undefined') {
+  var revealObserver = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (!entry.isIntersecting) return;
+      var cards = entry.target.querySelectorAll('.bp-card, .bp-step');
+      if (cards.length > 0 && typeof anime !== 'undefined') {
+        anime({
+          targets: cards,
+          opacity: [0, 1],
+          translateY: [18, 0],
+          delay: anime.stagger(75),
+          duration: 480,
+          easing: 'easeOutQuart'
+        });
+      }
+      revealObserver.unobserve(entry.target);
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.bp-section, .bp-section-lg, .bp-section-sm').forEach(function (s) {
+    revealObserver.observe(s);
+  });
+}
+
+/* ── Smooth scroll ────────────────────────────────────────────── */
+document.querySelectorAll('a[href^="#"]').forEach(function (link) {
+  link.addEventListener('click', function (e) {
+    var targetId = this.getAttribute('href').slice(1);
+    var target   = document.getElementById(targetId);
+    if (target) {
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+});
+</script>
+
+</body>
+</html>

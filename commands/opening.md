@@ -172,6 +172,8 @@ Same structured brief as last-1. The document is a specific one you were directe
 
 **Live threads** — lines of thinking that were active but not concluded.
 
+**Assumptions & fragile spots** — implicit choices the session made without deciding them explicitly (from Assumptions Made), and any parts of the work flagged as struggled-with or lower-confidence (from Where the Agent Struggled). Surface these so continuing work doesn't silently build on an unverified assumption, or treat a fragile area as more solid than it actually is.
+
 ---
 
 ### last-1 and last-2 (and date modes with 1–2 results)
@@ -186,13 +188,15 @@ Present a structured brief — not a raw dump. Include:
 
 **Live threads** — lines of thinking that were active but not concluded.
 
-If reading two sessions, synthesize across both — what changed, what got resolved, what was added to the pending list.
+**Assumptions & fragile spots** — implicit choices made without explicit deliberation, and any parts of the work flagged as struggled-with or lower-confidence. Surface these so continuing work doesn't silently build on an unverified assumption, or treat a fragile area as more solid than it actually is.
+
+If reading two sessions, synthesize across both — what changed, what got resolved, what was added to the pending list, and whether a fragile spot from the first session got confirmed solid or stayed shaky in the second.
 
 ---
 
 ### last-N (3+), today, yesterday, last-week, all (when 3+ files)
 
-Same structure as above, but organize by what's **still live** versus what's **resolved or shipped**. Resolved items get one line. Live items get the full treatment — state, why the decision was made, what's open.
+Same structure as above, but organize by what's **still live** versus what's **resolved or shipped**. Resolved items get one line. Live items get the full treatment — state, why the decision was made, what's open. For assumptions and fragile spots specifically: drop any that a later session explicitly confirmed or resolved; keep and flag any that recur across multiple sessions without ever getting checked — a repeatedly-unverified assumption or a repeatedly-fragile area is a stronger signal than a single mention.
 
 For date-range modes (today, yesterday, last-week), group by session at the top — one line per session showing the slug and what it covered — then the synthesized brief below. This gives a "what happened in this period" overview before the detail.
 
@@ -228,7 +232,7 @@ A narrative, not a brief. Plain prose, oldest-to-newest. Answer: **what is this 
 
 **Current shape** — what the system looks like now, as of the most recent session.
 
-**The frontier** — what's pending, what's half-decided, what threads are live. This is where the next session picks up.
+**The frontier** — what's pending, what's half-decided, what threads are live, and any standing assumptions or fragile areas flagged across sessions that were never explicitly confirmed or resolved. This is where the next session picks up.
 
 Write it so someone who has never seen the project before could understand both the system and the reasoning behind its current form.
 

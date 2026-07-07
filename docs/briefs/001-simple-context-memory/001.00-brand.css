@@ -1,0 +1,540 @@
+/* brand.css — Simple Context Memory */
+/* Visual redesign: memory-themed palette, pink + teal, warm charcoal */
+/* Mood: arctic.css tokens extended — grid killed, memory aesthetic applied */
+
+/* Vocabulary:
+   Primary:    Memory rose-pink  (#E879A8) — warm, neural, associative
+   Secondary:  Synaptic teal     (#2DD4BF) — precision, recall, the other half
+   Background: Warm charcoal     — no blue undertone
+   Grid:       Killed
+   Brain:      Faded silhouette in hero — 6.5% opacity, mask-faded at edges
+   Memory bg:  Radial neural-glow on dark sections; synaptic dot scatter on hooks
+   Shape:      Sharp — this is still a systems tool
+   Type:       JetBrains Mono headings, Inter body
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600&display=swap');
+
+@layer brand-state {
+  :root {
+    /* primary: memory rose-pink */
+    --color-primary:          #E879A8;
+    --color-primary-hover:    #D4609A;
+
+    /* secondary: synaptic teal (used for glow and gradient endpoint) */
+    --color-secondary:        #2DD4BF;
+
+    /* background: warm charcoal — not the blue-tinted dark of arctic */
+    --color-bg:               #0C0C10;
+    --color-bg-secondary:     #111116;
+    --color-surface:          #18181F;
+    --color-surface-elevated: #1F1F28;
+
+    /* borders: pink-tinted */
+    --color-border:           rgba(232, 121, 168, 0.15);
+
+    /* typography: monospace headings anchor the CLI identity */
+    --font-heading:           'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    --font-body:              'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono:              'JetBrains Mono', 'Fira Code', Consolas, monospace;
+
+    --letter-spacing-heading: -0.03em;
+    --font-weight-heading:    600;
+    --line-height-heading:    1.1;
+
+    --font-size-base:         15px;
+    --line-height-base:       1.65;
+
+    /* sharp corners throughout */
+    --radius:                 var(--bp-radius-none);
+
+    --space-unit:             0.875rem;
+    --grid-gap:               var(--bp-space-6);
+
+    /* code: pink-tinted inline code */
+    --color-code-bg:          rgba(232, 121, 168, 0.08);
+    --color-code-text:        #F4A8CC;
+
+    /* flat shadows */
+    --shadow-sm:              none;
+    --shadow-md:              none;
+    --shadow-lg:              0 8px 32px rgba(0, 0, 0, 0.5);
+
+    /* motion: snappy */
+    --duration-fast:          0.1s;
+    --duration-base:          0.18s;
+    --duration-slow:          0.28s;
+
+    /* ── Kill the blueprint grid ──────────────────────────────────── */
+    --bp-grid-color:          transparent;
+    --bp-grid-color-bold:     transparent;
+  }
+
+  /* ── Hero title gradient: pink → teal ──────────────────────────── */
+  .bp-text-gradient {
+    background-image: linear-gradient(135deg, #E879A8 0%, #2DD4BF 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Card ───────────────────────────────────────────────────────── */
+  .bp-card {
+    --card-radius:       0;
+    --card-border-color: rgba(232, 121, 168, 0.18);
+    --card-shadow:       none;
+    --card-bg:           var(--color-surface);
+  }
+
+  /* ── Nav ────────────────────────────────────────────────────────── */
+  .bp-nav {
+    --nav-bg:    var(--color-bg);
+    --nav-blur:  0px;
+    --nav-border: rgba(232, 121, 168, 0.14);
+  }
+
+  /* brand name: same size nav and footer */
+  .bp-nav-brand,
+  .bp-footer-brand-name { font-size: 13px; }
+
+  /* ── Buttons ────────────────────────────────────────────────────── */
+  .bp-btn {
+    --btn-radius:      0;
+    --btn-font:        var(--font-mono);
+    --btn-font-weight: 500;
+  }
+
+  /* ── Footer ─────────────────────────────────────────────────────── */
+  .bp-footer {
+    --footer-bg:     var(--color-bg-secondary);
+    --footer-border: rgba(232, 121, 168, 0.12);
+  }
+
+  /* ── Hero: memory glow + brain host ────────────────────────────── */
+  .bp-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse 55% 45% at 74% 22%, rgba(45, 212, 191, 0.07) 0%, transparent 65%),
+      radial-gradient(ellipse 48% 58% at 24% 76%, rgba(232, 121, 168, 0.07) 0%, transparent 65%);
+  }
+
+  /* ── Brain silhouette (inline SVG div in HTML) ──────────────────── */
+  .scm-brain-bg {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 72%;
+    max-width: 470px;
+    min-width: 240px;
+    opacity: 0.13;
+    pointer-events: none;
+    z-index: -1;
+    color: var(--color-primary);
+    /* flat through center third, then aggressive fade — no visible ellipse boundary */
+    -webkit-mask-image: radial-gradient(circle at center,
+      black 0%,
+      black 30%,
+      rgba(0,0,0,0.6) 48%,
+      rgba(0,0,0,0.18) 62%,
+      transparent 74%
+    );
+    mask-image: radial-gradient(circle at center,
+      black 0%,
+      black 30%,
+      rgba(0,0,0,0.6) 48%,
+      rgba(0,0,0,0.18) 62%,
+      transparent 74%
+    );
+  }
+
+  /* gentle blur feathers the stroke edges — prevents hard lines, preserves shape */
+  .scm-brain-bg svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    filter: blur(0.5px);
+  }
+
+  /* ── Dark sections: neural glow treatment ───────────────────────── */
+  /* Think of neurons firing at the corners — pink left, teal right */
+  .bp-section-dark {
+    background:
+      radial-gradient(ellipse 50% 60% at 8% 18%, rgba(232, 121, 168, 0.05) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 50% at 92% 82%, rgba(45, 212, 191, 0.04) 0%, transparent 70%),
+      var(--color-bg-secondary);
+  }
+
+  /* ── Synaptic dot texture ───────────────────────────────────────── */
+  /* Two offset dot fields at different pitches = quasi-random scatter
+     Used on the hooks section instead of solid background */
+  .scm-synaptic-bg {
+    background-image:
+      radial-gradient(circle 1.5px at 50% 50%, rgba(232, 121, 168, 0.20) 1.5px, transparent 1.5px),
+      radial-gradient(circle 1px   at 50% 50%, rgba(45, 212, 191, 0.14)  1px,   transparent 1px);
+    background-size:     43px 38px, 29px 33px;
+    background-position: 0 0,       14px 18px;
+    background-color:    var(--color-bg-secondary);
+  }
+
+  /* ── Custom components ──────────────────────────────────────────── */
+
+  /* Terminal window */
+  .scm-terminal {
+    background: #09090F;
+    border: 1px solid rgba(232, 121, 168, 0.22);
+    overflow: hidden;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  .scm-terminal-bar {
+    background: #0F0F18;
+    border-bottom: 1px solid rgba(232, 121, 168, 0.15);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .scm-terminal-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+  }
+
+  .scm-terminal-title {
+    color: rgba(255, 255, 255, 0.25);
+    font-size: 11px;
+    margin-left: auto;
+    letter-spacing: 0.04em;
+  }
+
+  .scm-terminal-content {
+    padding: 22px 24px;
+    min-height: 220px;
+    color: rgba(255, 255, 255, 0.82);
+  }
+
+  .scm-terminal-content pre {
+    margin: 0;
+    font-family: var(--font-mono);
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: inherit;
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: inherit;
+    line-height: inherit;
+  }
+
+  .scm-prompt        { color: var(--color-primary); }
+  .scm-output-success { color: #4ADE80; }
+  .scm-output-muted   { color: rgba(255, 255, 255, 0.35); }
+
+  .scm-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 1.1em;
+    background: var(--color-primary);
+    vertical-align: text-bottom;
+    animation: scm-blink 1.1s step-end infinite;
+  }
+
+  @keyframes scm-blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+  }
+
+  /* Tabs */
+  .scm-tabs {
+    display: flex;
+    border-bottom: 1px solid rgba(232, 121, 168, 0.18);
+    gap: 0;
+    margin-bottom: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .scm-tab {
+    flex-shrink: 0;
+    padding: 12px 22px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.35);
+    cursor: pointer;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    letter-spacing: 0.02em;
+    margin-bottom: -1px;
+    transition: color var(--duration-fast) var(--easing-smooth),
+                border-color var(--duration-fast) var(--easing-smooth);
+  }
+
+  .scm-tab:hover  { color: rgba(255, 255, 255, 0.7); }
+  .scm-tab.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+
+  .scm-tab-panel        { display: none; padding: 36px 0; }
+  .scm-tab-panel.active { display: block; }
+
+  /* Accordion */
+  .scm-accordion { border: 1px solid rgba(232, 121, 168, 0.16); }
+
+  .scm-accordion-item           { border-bottom: 1px solid rgba(232, 121, 168, 0.10); }
+  .scm-accordion-item:last-child { border-bottom: none; }
+
+  .scm-accordion-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 24px;
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--duration-fast) var(--easing-smooth);
+  }
+
+  .scm-accordion-header:hover { background: rgba(232, 121, 168, 0.04); }
+  .scm-accordion-header.open  { background: rgba(232, 121, 168, 0.06); }
+
+  .scm-accordion-section-num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-primary);
+    letter-spacing: 0.1em;
+    min-width: 28px;
+  }
+
+  .scm-accordion-title-text {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.88);
+  }
+
+  .scm-accordion-arrow {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.25);
+    transition: transform var(--duration-fast) var(--easing-smooth);
+  }
+
+  .scm-accordion-header.open .scm-accordion-arrow { transform: rotate(180deg); }
+
+  .scm-accordion-body {
+    display: none;
+    padding: 20px 24px 24px;
+    border-top: 1px solid rgba(232, 121, 168, 0.08);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .scm-accordion-body.open { display: block; }
+  .scm-accordion-body p    { margin: 0 0 12px; }
+
+  .scm-accordion-body pre {
+    background: #09090F;
+    border: 1px solid rgba(232, 121, 168, 0.18);
+    padding: 16px 20px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.65;
+    overflow-x: auto;
+    margin-top: 12px;
+    color: rgba(255, 255, 255, 0.75);
+    white-space: pre-wrap;
+  }
+
+  /* Do Not constraint */
+  .scm-do-not {
+    background: rgba(239, 68, 68, 0.05);
+    border-left: 3px solid #EF4444;
+    padding: 16px 20px;
+    margin-top: 16px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.65;
+    color: rgba(255, 255, 255, 0.78);
+  }
+
+  .scm-do-not-label {
+    color: #EF4444;
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  /* Copy-to-clipboard */
+  .scm-copy-container {
+    background: #09090F;
+    border: 1px solid rgba(232, 121, 168, 0.20);
+    padding: 14px 18px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .scm-copy-container code {
+    background: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-family: inherit;
+    font-size: inherit;
+    padding: 0;
+    flex: 1;
+    word-break: break-all;
+  }
+
+  .scm-copy-btn {
+    flex-shrink: 0;
+    padding: 5px 14px;
+    background: rgba(232, 121, 168, 0.08);
+    border: 1px solid rgba(232, 121, 168, 0.28);
+    color: var(--color-primary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    cursor: pointer;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: all var(--duration-fast) var(--easing-smooth);
+  }
+
+  .scm-copy-btn:hover  { background: rgba(232, 121, 168, 0.18); border-color: var(--color-primary); }
+  .scm-copy-btn.copied { color: #4ADE80; border-color: rgba(74, 222, 128, 0.5); background: rgba(74, 222, 128, 0.06); }
+
+  /* Command mode list */
+  .scm-mode-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .scm-mode-list li {
+    display: flex;
+    gap: 16px;
+    align-items: baseline;
+    font-size: 13px;
+    line-height: 1.5;
+    flex-wrap: wrap;
+  }
+
+  .scm-mode-cmd  { font-family: var(--font-mono); color: var(--color-primary); min-width: 160px; flex-shrink: 0; font-size: 12px; }
+  .scm-mode-desc { color: rgba(255, 255, 255, 0.5); }
+
+  /* Tab panel internals */
+  .scm-panel-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-primary);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .scm-panel-title {
+    font-family: var(--font-mono);
+    font-size: 1.375rem;
+    font-weight: 600;
+    line-height: 1.25;
+    margin-bottom: 16px;
+  }
+
+  .scm-panel-body       { line-height: 1.7; color: rgba(255, 255, 255, 0.6); }
+
+  .scm-panel-col-header {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.3);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  /* Card internals */
+  .scm-card-hook-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--color-primary);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .scm-card-note { font-size: 12px; color: rgba(255, 255, 255, 0.3); }
+
+  /* Installation step labels */
+  .scm-install-step-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.3);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  /* Section titles */
+  .scm-section-mono-title {
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.2;
+    margin: 12px 0 20px;
+  }
+
+  .scm-cta-title {
+    font-family: var(--font-mono);
+    font-size: 1.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    margin: 12px 0 16px;
+  }
+
+  .scm-cta-body { color: rgba(255, 255, 255, 0.5); }
+
+  /* Insight callout */
+  .scm-insight {
+    border-left: 2px solid var(--color-primary);
+    padding: 20px 24px;
+    background: rgba(232, 121, 168, 0.04);
+  }
+
+  .scm-insight-lead {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: rgba(255, 255, 255, 0.88);
+    margin-bottom: 16px;
+  }
+
+  .scm-insight-body {
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .scm-insight-note {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.55);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* Warning, strong emphasis, general text */
+  .scm-warning { color: #FCD34D; }
+  .scm-strong  { color: rgba(255, 255, 255, 0.88); }
+}

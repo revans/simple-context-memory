@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Simple Context Memory — No More Session Amnesia in Claude Code</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --graphite:#0D1117;
+  --slate:#151B27;
+  --slate-2:#1B2236;
+  --indigo:#7C6FF7;
+  --indigo-dim:#5A52C4;
+  --indigo-glow:rgba(124,111,247,0.12);
+  --mint:#3DD6B5;
+  --mint-glow:rgba(61,214,181,0.1);
+  --steel:#8094A8;
+  --steel-dim:#4A5E72;
+  --white:#EEF0F4;
+  --white-dim:rgba(238,240,244,0.6);
+  --white-faint:rgba(238,240,244,0.12);
+  --mono:'JetBrains Mono',monospace;
+  --red:#E05C6A;
+}
+html{scroll-behavior:smooth}
+body{background:var(--graphite);color:var(--white);font-family:'Inter',sans-serif;font-size:16px;line-height:1.65;overflow-x:hidden}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:1rem 3rem;background:rgba(13,17,23,0.92);backdrop-filter:blur(14px);border-bottom:1px solid rgba(128,148,168,0.1)}
+.nav-logo{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:0.9rem;letter-spacing:0.04em;color:var(--indigo)}
+.nav-logo span{color:var(--white);font-weight:300}
+nav ul{list-style:none;display:flex;gap:2rem}
+nav ul a{color:var(--steel);text-decoration:none;font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;transition:color 0.2s}
+nav ul a:hover{color:var(--white)}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8rem 2rem 5rem;position:relative;overflow:hidden;text-align:center;background:var(--graphite)}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 55% 45% at 50% 40%,rgba(124,111,247,0.07) 0%,transparent 70%);pointer-events:none}
+
+/* AMNESIA ANIMATION */
+.amnesia-wrap{width:100%;max-width:580px;margin:0 auto 3rem;position:relative}
+.terminal{background:#0A0D13;border:1px solid rgba(128,148,168,0.15);border-radius:4px;overflow:hidden;text-align:left}
+.terminal-bar{display:flex;align-items:center;gap:0.5rem;padding:0.65rem 1rem;background:#111620;border-bottom:1px solid rgba(128,148,168,0.1)}
+.term-dot{width:10px;height:10px;border-radius:50%}
+.term-dot.red{background:#E05C6A}
+.term-dot.yellow{background:#E8A045}
+.term-dot.green{background:#3DD6B5}
+.term-title{font-family:var(--mono);font-size:0.68rem;color:var(--steel);margin:0 auto}
+.terminal-body{padding:1.2rem 1.4rem;min-height:160px;position:relative}
+.term-line{font-family:var(--mono);font-size:0.78rem;line-height:1.9;display:block}
+.term-line.dim{color:var(--steel-dim)}
+.term-line.white{color:var(--white)}
+.term-line.mint{color:var(--mint)}
+.term-line.indigo{color:var(--indigo)}
+.term-line.red{color:var(--red)}
+.term-cursor{display:inline-block;width:7px;height:13px;background:var(--indigo);animation:blink 1s step-end infinite;vertical-align:middle;margin-left:2px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.amnesia-label{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--red);margin-top:0.75rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;opacity:0;transition:opacity 0.4s}
+.amnesia-label.visible{opacity:1}
+.amnesia-dot{width:6px;height:6px;border-radius:50%;background:var(--red);animation:pulse-red 1.5s ease-in-out infinite}
+@keyframes pulse-red{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(224,92,106,0.4)}50%{opacity:0.6;box-shadow:0 0 0 4px rgba(224,92,106,0)}}
+
+.eyebrow{font-family:var(--mono);font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--indigo);margin-bottom:1.2rem}
+.hero-title{font-family:'Space Grotesk',sans-serif;font-size:clamp(2.2rem,4.5vw,4.2rem);font-weight:700;line-height:1.06;max-width:780px;margin:0 auto 1.2rem}
+.hero-title em{font-style:normal;color:var(--indigo)}
+.hero-sub{color:var(--white-dim);font-size:1rem;max-width:580px;line-height:1.85;margin:0 auto 2rem}
+.hero-badges{display:flex;gap:0.65rem;flex-wrap:wrap;justify-content:center;margin-bottom:2.5rem}
+.badge{font-family:'Space Grotesk',sans-serif;font-size:0.68rem;font-weight:600;letter-spacing:0.1em;padding:0.28rem 0.8rem;border-radius:2px;text-transform:uppercase}
+.badge-indigo{background:var(--indigo-glow);color:var(--indigo);border:1px solid rgba(124,111,247,0.3)}
+.badge-mint{background:var(--mint-glow);color:var(--mint);border:1px solid rgba(61,214,181,0.25)}
+.badge-steel{background:rgba(74,94,114,0.1);color:var(--steel);border:1px solid rgba(74,94,114,0.3)}
+.hero-cta{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+.btn-primary{background:var(--indigo);color:var(--white);font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:0.85rem;letter-spacing:0.06em;padding:0.8rem 2rem;border:none;cursor:pointer;transition:opacity 0.2s;text-decoration:none;display:inline-block}
+.btn-primary:hover{opacity:0.88}
+.btn-ghost{background:transparent;color:var(--white);font-family:'Space Grotesk',sans-serif;font-weight:500;font-size:0.85rem;letter-spacing:0.06em;padding:0.8rem 2rem;border:1px solid var(--steel-dim);cursor:pointer;transition:border-color 0.2s;text-decoration:none;display:inline-block}
+.btn-ghost:hover{border-color:var(--steel)}
+
+/* PROBLEM SECTION */
+.problem-section{padding:5rem 2rem;background:var(--slate)}
+.problem-inner{max-width:860px;margin:0 auto}
+.section-eyebrow{font-family:var(--mono);font-size:0.67rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--indigo);margin-bottom:0.6rem;display:block}
+.section-eyebrow-mint{color:var(--mint)}
+.section-title{font-family:'Space Grotesk',sans-serif;font-size:clamp(1.5rem,2.8vw,2.1rem);font-weight:600;margin-bottom:1rem}
+.section-body{color:var(--white-dim);font-size:0.95rem;line-height:1.85;margin-bottom:1rem}
+.problem-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1px;background:var(--steel-dim);margin-top:2.5rem}
+.problem-card{background:var(--graphite);padding:1.8rem 1.6rem}
+.problem-card-icon{font-size:1.4rem;margin-bottom:0.8rem}
+.problem-card-title{font-family:'Space Grotesk',sans-serif;font-size:0.95rem;font-weight:600;margin-bottom:0.5rem}
+.problem-card-body{font-size:0.82rem;color:var(--white-dim);line-height:1.75}
+
+/* SOLUTION OVERVIEW */
+.solution-section{padding:5rem 2rem;background:var(--graphite)}
+.solution-inner{max-width:1080px;margin:0 auto}
+.three-horizons{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--steel-dim);margin-top:2.5rem}
+.horizon-card{background:var(--slate);padding:2rem 1.8rem;position:relative}
+.horizon-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px}
+.hc-indigo::before{background:var(--indigo)}
+.hc-mint::before{background:var(--mint)}
+.hc-steel::before{background:var(--steel-dim)}
+.horizon-num{font-family:var(--mono);font-size:0.65rem;color:var(--steel);letter-spacing:0.15em;margin-bottom:0.5rem}
+.horizon-cmd{font-family:var(--mono);font-size:1.2rem;font-weight:500;margin-bottom:0.3rem}
+.hc-indigo .horizon-cmd{color:var(--indigo)}
+.hc-mint .horizon-cmd{color:var(--mint)}
+.hc-steel .horizon-cmd{color:var(--steel)}
+.horizon-label{font-family:'Space Grotesk',sans-serif;font-size:0.78rem;font-weight:500;color:var(--white-dim);margin-bottom:1rem;letter-spacing:0.04em}
+.horizon-body{font-size:0.82rem;color:var(--white-dim);line-height:1.8;margin-bottom:1rem}
+.horizon-when{font-size:0.75rem;color:var(--steel);font-style:italic;border-top:1px solid rgba(128,148,168,0.12);padding-top:0.8rem}
+
+/* COMMANDS DETAIL */
+.commands-section{padding:5rem 2rem;background:var(--slate)}
+.commands-inner{max-width:1080px;margin:0 auto}
+
+/* COMMAND BLOCKS */
+.cmd-block{margin-top:3rem;opacity:0;transform:translateY(16px);transition:opacity 0.5s ease,transform 0.5s ease}
+.cmd-block.visible{opacity:1;transform:translateY(0)}
+.cmd-block-header{display:grid;grid-template-columns:auto 1fr;gap:2rem;align-items:start;margin-bottom:2rem}
+.cmd-name-wrap{display:flex;flex-direction:column;gap:0.4rem;min-width:180px}
+.cmd-name{font-family:var(--mono);font-size:1.5rem;font-weight:500}
+.cmd-name.indigo{color:var(--indigo)}
+.cmd-name.mint{color:var(--mint)}
+.cmd-name.steel{color:var(--steel)}
+.cmd-tagline{font-size:0.78rem;color:var(--white-dim);font-style:italic}
+.cmd-desc{font-size:0.9rem;color:var(--white-dim);line-height:1.85}
+.cmd-divider{width:100%;height:1px;background:rgba(128,148,168,0.1);margin:2rem 0}
+
+/* MODE TABLES */
+.mode-table{width:100%;border-collapse:collapse;font-size:0.78rem;margin-top:1rem}
+.mode-table th{font-family:var(--mono);font-size:0.63rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--steel);padding:0.5rem 0.8rem;border-bottom:1px solid rgba(128,148,168,0.12);text-align:left}
+.mode-table td{padding:0.5rem 0.8rem;border-bottom:1px solid rgba(128,148,168,0.06);color:var(--white-dim);vertical-align:top}
+.mode-table td:first-child{font-family:var(--mono);font-size:0.75rem;color:var(--indigo);white-space:nowrap}
+.mode-table tr:hover td{background:rgba(124,111,247,0.03)}
+
+/* SESSION DOC */
+.session-doc{background:#0A0D13;border:1px solid rgba(128,148,168,0.12);margin-top:1.5rem;overflow:hidden}
+.session-doc-header{padding:0.8rem 1.2rem;background:#111620;border-bottom:1px solid rgba(128,148,168,0.1);font-family:var(--mono);font-size:0.72rem;color:var(--steel);display:flex;align-items:center;gap:0.6rem}
+.session-doc-body{padding:1.2rem 1.6rem}
+.doc-section{margin-bottom:1.2rem}
+.doc-section-title{font-family:var(--mono);font-size:0.72rem;color:var(--mint);margin-bottom:0.4rem}
+.doc-section-body{font-size:0.78rem;color:var(--white-dim);line-height:1.75}
+.doc-donotion{font-size:0.78rem;color:var(--white-dim);line-height:1.75}
+.doc-donotion strong{color:var(--red)}
+.doc-qa{display:grid;grid-template-columns:auto 1fr;gap:0.3rem 0.8rem;font-size:0.78rem}
+.doc-qa-q{color:var(--steel);font-style:italic}
+.doc-qa-a{color:var(--white-dim)}
+
+/* HOOKS */
+.hooks-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1px;background:var(--steel-dim);margin-top:1.5rem}
+.hook-card{background:var(--graphite);padding:1.6rem}
+.hook-card-label{font-family:var(--mono);font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--steel);margin-bottom:0.3rem}
+.hook-card-name{font-family:var(--mono);font-size:0.88rem;color:var(--indigo);margin-bottom:0.6rem}
+.hook-card-trigger{font-family:var(--mono);font-size:0.7rem;color:var(--mint);margin-bottom:0.5rem}
+.hook-card-body{font-size:0.78rem;color:var(--white-dim);line-height:1.75}
+
+/* WHY IT WORKS */
+.why-section{padding:5rem 2rem;background:var(--graphite)}
+.why-inner{max-width:860px;margin:0 auto}
+.why-blocks{display:flex;flex-direction:column;gap:0;margin-top:2.5rem}
+.why-block{display:grid;grid-template-columns:3px 1fr;gap:1.4rem;padding:1.8rem 0;border-bottom:1px solid rgba(128,148,168,0.08)}
+.why-block:last-child{border-bottom:none}
+.why-line-indigo{background:var(--indigo)}
+.why-line-mint{background:var(--mint)}
+.why-line-steel{background:var(--steel-dim)}
+.why-line-both{background:linear-gradient(to bottom,var(--indigo),var(--mint))}
+.why-title{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:600;margin-bottom:0.5rem}
+.why-body{font-size:0.87rem;color:var(--white-dim);line-height:1.85}
+.why-body code{font-family:var(--mono);font-size:0.8rem;color:var(--indigo);background:var(--indigo-glow);padding:0.1rem 0.4rem}
+
+/* INSTALL */
+.install-section{padding:5rem 2rem;background:var(--slate)}
+.install-inner{max-width:860px;margin:0 auto}
+.install-steps{display:flex;flex-direction:column;gap:1px;background:var(--steel-dim);margin-top:2.5rem}
+.install-step{background:var(--graphite);padding:1.6rem 2rem;display:grid;grid-template-columns:36px 1fr;gap:1.2rem;align-items:start}
+.install-step-num{font-family:var(--mono);font-size:0.75rem;color:var(--indigo);padding-top:0.15rem}
+.install-step-title{font-family:'Space Grotesk',sans-serif;font-size:0.92rem;font-weight:600;margin-bottom:0.4rem}
+.install-step-body{font-size:0.82rem;color:var(--white-dim);line-height:1.75}
+.code-block{background:#0A0D13;border:1px solid rgba(128,148,168,0.12);padding:0.9rem 1.2rem;margin-top:0.7rem;font-family:var(--mono);font-size:0.75rem;color:var(--mint);overflow-x:auto}
+.code-block .comment{color:var(--steel-dim)}
+
+/* SBAR */
+.sbar-section{padding:5rem 2rem;background:var(--slate-2)}
+.sbar-inner{max-width:860px;margin:0 auto}
+.sbar-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1px;background:var(--steel-dim);margin-top:2rem}
+.sbar-card{background:var(--slate);padding:1.4rem 1.6rem}
+.sbar-letter{font-family:'Space Grotesk',sans-serif;font-size:1.8rem;font-weight:700;color:var(--indigo);opacity:0.3;margin-bottom:0.3rem;line-height:1}
+.sbar-name{font-family:'Space Grotesk',sans-serif;font-size:0.88rem;font-weight:600;margin-bottom:0.4rem}
+.sbar-body{font-size:0.78rem;color:var(--white-dim);line-height:1.75}
+.sbar-callout{max-width:860px;margin:1.5rem auto 0;padding:1.2rem 1.6rem;background:rgba(124,111,247,0.05);border-left:3px solid var(--indigo)}
+.sbar-callout p{font-size:0.88rem;color:var(--white-dim);line-height:1.8}
+.sbar-callout strong{color:var(--white)}
+
+/* ATTRIBUTION */
+.attribution{padding:3rem 2rem;background:var(--graphite);border-top:1px solid rgba(128,148,168,0.1);text-align:center}
+.attribution p{font-size:0.8rem;color:var(--steel)}
+.attribution a{color:var(--indigo);text-decoration:none}
+.attribution a:hover{text-decoration:underline}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  nav{padding:1rem 1.5rem}
+  nav ul{gap:1rem}
+  .hero{padding:7rem 1.5rem 4rem}
+  .three-horizons{grid-template-columns:1fr}
+  .cmd-block-header{grid-template-columns:1fr}
+  .problem-section,.solution-section,.commands-section,.why-section,.install-section,.sbar-section{padding:3.5rem 1.5rem}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Simple<span>ContextMemory</span></div>
+  <ul>
+    <li><a href="#commands">Commands</a></li>
+    <li><a href="#hooks">Hooks</a></li>
+    <li><a href="#why">Why It Works</a></li>
+    <li><a href="#install">Install</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="eyebrow">A Claude Code plugin by Robert Evans</div>
+
+  <!-- AMNESIA ANIMATION -->
+  <div class="amnesia-wrap">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="term-dot red"></div>
+        <div class="term-dot yellow"></div>
+        <div class="term-dot green"></div>
+        <div class="term-title">claude-code — new session</div>
+      </div>
+      <div class="terminal-body" id="terminal-body">
+        <span class="term-line dim"># Previous session state...</span>
+        <span class="term-line white" id="tl-1">✓ Auth middleware decision settled</span>
+        <span class="term-line white" id="tl-2">✓ Redis rejected — do not reintroduce</span>
+        <span class="term-line white" id="tl-3">✓ Webhook retry policy verified (6hr window)</span>
+        <span class="term-line mint" id="tl-4">✓ Payment processor refactor in progress...</span>
+        <span class="term-line dim" id="tl-5" style="margin-top:0.5rem"># Starting new session</span>
+        <span class="term-line" id="tl-cursor"><span class="term-cursor"></span></span>
+      </div>
+    </div>
+    <div class="amnesia-label" id="amnesia-label">
+      <div class="amnesia-dot"></div>
+      Context wiped — Claude remembers nothing
+    </div>
+  </div>
+
+  <h1 class="hero-title">Claude Code starts with <em>total amnesia.</em> Every session.</h1>
+  <p class="hero-sub">Three slash commands that implement a surgical handoff system — so no session starts cold and no decision gets re-litigated from scratch.</p>
+  <div class="hero-badges">
+    <span class="badge badge-indigo">/opening</span>
+    <span class="badge badge-indigo">/closing</span>
+    <span class="badge badge-indigo">/report</span>
+    <span class="badge badge-mint">Zero Config</span>
+    <span class="badge badge-mint">Global or Per-Project</span>
+    <span class="badge badge-steel">Compaction Protection</span>
+  </div>
+  <div class="hero-cta">
+    <a href="#install" class="btn-primary">Install in 30 seconds</a>
+    <a href="#commands" class="btn-ghost">See the Commands</a>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section class="problem-section" id="problem">
+  <div class="problem-inner">
+    <span class="section-eyebrow">The Problem</span>
+    <h2 class="section-title">Not "a little forgetful" — total blank slate</h2>
+    <p class="section-body">Every time you start a Claude Code session, Claude wakes up with complete amnesia. The project you've been building for three weeks, the decision you made Thursday about why you're not using Redis, the half-finished design sitting in your last conversation — gone.</p>
+    <p class="section-body">The reflex solution is to save everything. Dump the whole context into memory files. But that's just moving noise. Claude can't tell which of the forty remembered facts is the one that matters right now, and you end up re-litigating decisions you already settled.</p>
+
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="problem-card-icon">🧠</div>
+        <div class="problem-card-title">Decisions re-litigated</div>
+        <div class="problem-card-body">Claude proposes Redis again. You explain why you rejected it — again. The reasoning that took an hour to arrive at the first time costs another hour to reconstruct.</div>
+      </div>
+      <div class="problem-card">
+        <div class="problem-card-icon">🪤</div>
+        <div class="problem-card-title">Compaction is lossy</div>
+        <div class="problem-card-body">When the context window fills, Claude Code compacts automatically — and compaction summarizes rather than preserves. The fine-grained <em>why</em> behind decisions is gone.</div>
+      </div>
+      <div class="problem-card">
+        <div class="problem-card-icon">🌊</div>
+        <div class="problem-card-title">Context overload</div>
+        <div class="problem-card-body">Dumping everything into memory files moves noise, not signal. Claude can't distinguish load-bearing decisions from incidental observations when they're all the same weight.</div>
+      </div>
+      <div class="problem-card">
+        <div class="problem-card-icon">🔄</div>
+        <div class="problem-card-title">The wrong roads, again</div>
+        <div class="problem-card-body">Without a record of what was rejected and why, every session is free to rediscover dead ends. The same wrong paths get explored with fresh confidence each time.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SOLUTION OVERVIEW -->
+<section class="solution-section" id="commands">
+  <div class="solution-inner">
+    <span class="section-eyebrow section-eyebrow-mint">The Solution</span>
+    <h2 class="section-title">A surgical handoff system. Three commands.</h2>
+    <p class="section-body" style="max-width:680px;color:var(--white-dim);font-size:0.95rem">When a surgeon hands off to another, they don't read the full patient chart — they write a one-page note: what changed on this shift, what decisions were made and why, what's still open. That's it. Everything else is reconstruction the incoming surgeon can do. These commands implement that system for Claude Code.</p>
+
+    <div class="three-horizons">
+      <div class="horizon-card hc-indigo">
+        <div class="horizon-num">Time horizon 01 — Session to session</div>
+        <div class="horizon-cmd">/closing</div>
+        <div class="horizon-label">Write the handoff note before you leave</div>
+        <div class="horizon-body">Captures what was built, why it was done this way (including the reasoning that prevents re-litigation), what was considered and rejected, and what's explicitly open. Saves an archaeology document to <code style="font-family:var(--mono);font-size:0.75rem;color:var(--indigo)">docs/sessions/</code> with a timestamp filename.</div>
+        <div class="horizon-when">Run before closing Claude Code — or before the context window fills up. Don't wait until the end.</div>
+      </div>
+      <div class="horizon-card hc-mint">
+        <div class="horizon-num">Time horizon 02 — Note to context</div>
+        <div class="horizon-cmd">/opening</div>
+        <div class="horizon-label">Read the handoff note when you arrive</div>
+        <div class="horizon-body">Reads session archaeology documents and gives you a structured brief: what the project currently is, what decisions are settled, what's pending, and what threads were live when you left off. For large loads, delegates to a subagent so raw history never enters your context.</div>
+        <div class="horizon-when">Run at the start of every session. First thing, before any other commands.</div>
+      </div>
+      <div class="horizon-card hc-steel">
+        <div class="horizon-num">Time horizon 03 — History to current state</div>
+        <div class="horizon-cmd">/report</div>
+        <div class="horizon-label">Synthesize across all sessions</div>
+        <div class="horizon-body">Reads every session document and produces a single project state report: every still-open deferral cross-referenced against later sessions, every Do Not constraint accumulated across all Roads Not Taken, every standing assumption nobody has confirmed or overturned, and every fragile area still flagged as needing scrutiny. Incremental by default — only processes new sessions on each run.</div>
+        <div class="horizon-when">Run when sessions start accumulating. At 20+ sessions, the report plus 2–3 recent files equals loading everything — at a fraction of the token cost.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMMANDS DETAIL -->
+<section class="commands-section">
+  <div class="commands-inner">
+    <span class="section-eyebrow">/closing — in depth</span>
+    <h2 class="section-title">The archaeology document</h2>
+    <p class="section-body" style="max-width:680px;color:var(--white-dim);font-size:0.95rem">The code shows you what was built. Only this document shows you why the obvious alternative wasn't chosen — and where to be careful even when nothing looks obviously wrong. Nine sections. Each one signals to Claude what's load-bearing so it doesn't have to infer.</p>
+
+    <div class="cmd-block visible">
+      <div class="session-doc">
+        <div class="session-doc-header">
+          <span style="color:var(--indigo)">●</span>
+          docs/sessions/2026-05-19-1531-drop-idempotency-table.md
+        </div>
+        <div class="session-doc-body">
+          <div class="doc-section">
+            <div class="doc-section-title">## Summary</div>
+            <div class="doc-section-body">Removed the local idempotency table and switched to Stripe's native idempotency key support. The table was duplicating protection Stripe already provides for free. Next session: decide whether to log the Stripe idempotency keys for audit purposes.</div>
+          </div>
+          <div class="doc-section">
+            <div class="doc-section-title">## What We Did</div>
+            <div class="doc-section-body">Removed <code style="font-family:var(--mono);font-size:0.72rem;color:var(--mint)">IdempotencyKey</code> model entirely · Switched to Stripe's built-in <code style="font-family:var(--mono);font-size:0.72rem;color:var(--mint)">Idempotency-Key</code> header · Updated <code style="font-family:var(--mono);font-size:0.72rem;color:var(--mint)">payment_processor.rb</code> · Removed migration (rolled back before drop)</div>
+          </div>
+          <div class="doc-section">
+            <div class="doc-section-title">## Roads Not Taken</div>
+            <div class="doc-donotion">Redis-backed idempotency store — adds an infrastructure dependency for a problem Stripe already solves. <strong>Do not introduce a local idempotency store of any kind — Stripe's native support covers all current payment paths.</strong></div>
+          </div>
+          <div class="doc-section">
+            <div class="doc-section-title">## Key Discoveries</div>
+            <div class="doc-qa">
+              <div class="doc-qa-q">Does Stripe's idempotency window cover our retry policy?</div>
+              <div class="doc-qa-a">→ Yes. Stripe's window is 24 hours; our retry policy retries within 6 hours. Safe.</div>
+            </div>
+          </div>
+          <div class="doc-section">
+            <div class="doc-section-title">## Assumptions Made</div>
+            <div class="doc-section-body">Assumed <code style="font-family:var(--mono);font-size:0.72rem;color:var(--mint)">stripe_event_id</code> is unique per logical charge attempt across retries — never explicitly verified against Stripe's retry docs, just inferred from observed staging behavior. If Stripe ever reuses an event ID across two distinct charge attempts, this strategy would silently swallow a legitimate second charge.</div>
+          </div>
+          <div class="doc-section">
+            <div class="doc-section-title">## Where the Agent Struggled</div>
+            <div class="doc-section-body">Confirming the 24-hour window took three searches through Stripe's docs before finding the number stated explicitly. Treat the number as solid — but the difficulty finding it is worth knowing if this ever needs re-verifying.</div>
+          </div>
+          <div class="doc-section" style="margin-bottom:0">
+            <div class="doc-section-title">## Open Questions &amp; Next Steps</div>
+            <div class="doc-section-body">Do we want to log the Idempotency-Key values we send to Stripe for audit purposes, or is Stripe's dashboard sufficient? Deferred — not a blocker for the current release.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="max-width:860px;margin:2rem auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:var(--steel-dim)">
+      <div style="background:var(--graphite);padding:1.2rem 1.4rem">
+        <div style="font-family:var(--mono);font-size:0.65rem;color:var(--mint);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem">Summary</div>
+        <div style="font-size:0.78rem;color:var(--white-dim);line-height:1.7">2–3 sentences. Orient in ten seconds without reading anything else.</div>
+      </div>
+      <div style="background:var(--graphite);padding:1.2rem 1.4rem">
+        <div style="font-family:var(--mono);font-size:0.65rem;color:var(--mint);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem">What We Did</div>
+        <div style="font-size:0.78rem;color:var(--white-dim);line-height:1.7">File paths, function names, design choices. Specific — not vague.</div>
+      </div>
+      <div style="background:var(--graphite);padding:1.2rem 1.4rem">
+        <div style="font-family:var(--mono);font-size:0.65rem;color:var(--mint);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem">Why We Did It</div>
+        <div style="font-size:0.78rem;color:var(--white-dim);line-height:1.7">The reasoning. So future sessions don't re-litigate it.</div>
+      </div>
+      <div style="background:var(--graphite);padding:1.2rem 1.4rem">
+        <div style="font-family:var(--mono);font-size:0.65rem;color:var(--red);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem">Roads Not Taken</div>
+        <div style="font-size:0.78rem;color:var(--white-dim);line-height:1.7">What was rejected. Each entry ends with a bold <strong style="color:var(--red)">Do not [X] because [Y]</strong> constraint.</div>
+      </div>
+      <div style="background:var(--graphite);padding:1.2rem 1.4rem">
+        <div style="font-family:var(--mono);font-size:0.65rem;color:var(--mint);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem">Key Discoveries</div>
+        <div style="font-size:0.78rem;color:var(--white-dim);line-height:1.7">Questions answered. Root causes traced. Formatted as question → answer pairs.</div>
+      </div>
+      <div style="background:var(--graphite);padding:1.2rem 1.4rem">
+        <div style="font-family:var(--mono);font-size:0.65rem;color:var(--mint);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem">Assumptions Made</div>
+        <div style="font-size:0.78rem;color:var(--white-dim);line-height:1.7">Implicit choices filled in without ever being decided. Nobody flagged it — so a future reader can't audit it unless it's written down here.</div>
+      </div>
+      <div style="background:var(--graphite);padding:1.2rem 1.4rem">
+        <div style="font-family:var(--mono);font-size:0.65rem;color:var(--mint);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem">Where the Agent Struggled</div>
+        <div style="font-size:0.78rem;color:var(--white-dim);line-height:1.7">A confidence signal, not a content claim. Which parts took multiple attempts or landed with lower confidence — so you know where to look twice.</div>
+      </div>
+      <div style="background:var(--graphite);padding:1.2rem 1.4rem">
+        <div style="font-family:var(--mono);font-size:0.65rem;color:var(--mint);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem">Open Questions</div>
+        <div style="font-size:0.78rem;color:var(--white-dim);line-height:1.7">Deferred items, half-decisions, action items. What the next session picks up.</div>
+      </div>
+      <div style="background:var(--graphite);padding:1.2rem 1.4rem">
+        <div style="font-family:var(--mono);font-size:0.65rem;color:var(--mint);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem">Files Changed</div>
+        <div style="font-size:0.78rem;color:var(--white-dim);line-height:1.7">What changed and where, plus any constraint before a future session touches that file.</div>
+      </div>
+    </div>
+
+    <!-- /opening modes -->
+    <div style="margin-top:4rem">
+      <span class="section-eyebrow">/opening — in depth</span>
+      <h2 class="section-title" style="margin-top:0.5rem">/opening modes</h2>
+      <p class="section-body" style="max-width:680px;color:var(--white-dim);font-size:0.95rem">Pass an argument to control how far back to look. For 3+ session files, /opening delegates to a subagent — the raw archaeology never enters your context window.</p>
+      <table class="mode-table" style="max-width:860px;margin-top:1.5rem">
+        <thead>
+          <tr>
+            <th>Command</th>
+            <th>What it loads</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>/opening</td><td>Last session (default)</td></tr>
+          <tr><td>/opening 2</td><td>Last 2 sessions</td></tr>
+          <tr><td>/opening today</td><td>All sessions from today</td></tr>
+          <tr><td>/opening last-week</td><td>Sessions from the past 7 days</td></tr>
+          <tr><td>/opening all</td><td>Every session — full arc</td></tr>
+          <tr><td>/opening summary</td><td>Every session as a narrative — "how did we get here?"</td></tr>
+          <tr><td>/opening search &lt;question&gt;</td><td>Searches history to answer a specific question — always delegates to subagent</td></tr>
+          <tr><td>/opening file &lt;path&gt;</td><td>Loads a specific session file directly</td></tr>
+        </tbody>
+      </table>
+      <div style="max-width:860px;margin-top:1rem;padding:1rem 1.4rem;background:rgba(124,111,247,0.05);border-left:3px solid var(--indigo)">
+        <p style="font-size:0.84rem;color:var(--white-dim);line-height:1.8">The <strong style="color:var(--white)">summary</strong> mode is what you want after a long break — it tells the story of how the project arrived at its current shape. The <strong style="color:var(--white)">search</strong> mode finds specific decisions: <code style="font-family:var(--mono);font-size:0.75rem;color:var(--indigo)">/opening search why did we drop the webhook approach</code></p>
+      </div>
+    </div>
+
+    <!-- /report detail -->
+    <div style="margin-top:4rem" id="hooks">
+      <span class="section-eyebrow">/report — in depth</span>
+      <h2 class="section-title" style="margin-top:0.5rem">Accumulated state across all sessions</h2>
+      <p class="section-body" style="max-width:680px;color:var(--white-dim);font-size:0.95rem">One session document answers "what happened last time?" Thirty session documents answer a harder question: what is the accumulated state of all deferred work, locked constraints, standing assumptions, and fragile areas across the entire project history? The report collapses that into a single load — four sections, not two.</p>
+      <div style="max-width:860px;margin-top:1.5rem;display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--steel-dim)">
+        <div style="background:var(--slate);padding:1.4rem 1.6rem">
+          <div style="font-family:var(--mono);font-size:0.65rem;color:var(--steel);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.5rem">/report</div>
+          <div style="font-size:0.82rem;color:var(--white-dim);line-height:1.75">Incremental — reads <code style="font-family:var(--mono);font-size:0.72rem;color:var(--indigo)">last_session</code> cursor from the report frontmatter and only processes new sessions. At 20+ sessions you're not re-paying the synthesis cost on history already captured.</div>
+        </div>
+        <div style="background:var(--slate);padding:1.4rem 1.6rem">
+          <div style="font-family:var(--mono);font-size:0.65rem;color:var(--steel);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.5rem">/report full</div>
+          <div style="font-size:0.82rem;color:var(--white-dim);line-height:1.75">Ignores the cursor and rebuilds from every session document. Use after a /closing that may have resolved items the report currently shows as open.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOOKS -->
+    <div style="margin-top:4rem">
+      <span class="section-eyebrow">Compaction Protection</span>
+      <h2 class="section-title" style="margin-top:0.5rem">Three hooks. One layered defence.</h2>
+      <p class="section-body" style="max-width:680px;color:var(--white-dim);font-size:0.95rem">Claude Code compacts automatically when the context window fills — and compaction is lossy. Don't wait until the end of a session to run /closing. These hooks automate the safety net.</p>
+      <div class="hooks-grid">
+        <div class="hook-card">
+          <div class="hook-card-label">Hook 01</div>
+          <div class="hook-card-name">context-watch.py</div>
+          <div class="hook-card-trigger">UserPromptSubmit</div>
+          <div class="hook-card-body">Monitors context usage on every prompt. Warns at 60% and 75% — early notice to run /closing manually before compaction happens. Parses the session JSONL backwards for the last usage block.</div>
+        </div>
+        <div class="hook-card">
+          <div class="hook-card-label">Hook 02 — Safety Net</div>
+          <div class="hook-card-name">pre-compact.py</div>
+          <div class="hook-card-trigger">PreCompact</div>
+          <div class="hook-card-body">Acts automatically if you don't. Instructs Claude to write a session document immediately before compaction runs — so even if you miss the 60% warning, the archaeology is preserved.</div>
+        </div>
+        <div class="hook-card">
+          <div class="hook-card-label">Hook 03</div>
+          <div class="hook-card-name">post-compact.py</div>
+          <div class="hook-card-trigger">PostCompact</div>
+          <div class="hook-card-body">After compaction, names the session file that was written and prompts you to run /opening to reorient. If no file was written, tells you to run /closing immediately to capture what remains.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SBAR-C -->
+<section class="sbar-section" id="why">
+  <div class="sbar-inner">
+    <span class="section-eyebrow">Inside /closing</span>
+    <h2 class="section-title">SBAR-C — a nursing handoff framework</h2>
+    <p class="section-body" style="max-width:680px;color:var(--white-dim);font-size:0.95rem">Before writing any section, /closing has Claude reason through the session using SBAR-C as a completeness check. This reasoning doesn't produce extra sections — it surfaces content for the sections that already exist, and catches contingencies before they get buried.</p>
+    <div class="sbar-grid">
+      <div class="sbar-card">
+        <div class="sbar-letter">S</div>
+        <div class="sbar-name">Situation</div>
+        <div class="sbar-body">What is the current state of the project? What changed this session?</div>
+      </div>
+      <div class="sbar-card">
+        <div class="sbar-letter">B</div>
+        <div class="sbar-name">Background</div>
+        <div class="sbar-body">What led to the key decisions? What context is needed to understand why things are the way they are?</div>
+      </div>
+      <div class="sbar-card">
+        <div class="sbar-letter">A</div>
+        <div class="sbar-name">Assessment</div>
+        <div class="sbar-body">What was figured out that wasn't known before? What questions were answered?</div>
+      </div>
+      <div class="sbar-card">
+        <div class="sbar-letter">R</div>
+        <div class="sbar-name">Recommendation</div>
+        <div class="sbar-body">What needs to happen next? What is the clearest path forward for the next session?</div>
+      </div>
+      <div class="sbar-card">
+        <div class="sbar-letter">C</div>
+        <div class="sbar-name">Contingency</div>
+        <div class="sbar-body">What assumptions were made that, if they change, would reopen a closed decision — and which assumptions were never a decision at all, just a gap quietly filled in?</div>
+      </div>
+    </div>
+    <div class="sbar-callout">
+      <p>Contingency is the key addition to standard SBAR, and it splits two ways. A contingency tied to a decision lands as a conditional in the Do Not line: <strong>Do not X because Y — unless Z, in which case reconsider.</strong> That way the guard rail carries its own expiry condition. A contingency <em>not</em> tied to any decision — an assumption nobody consciously made, or a part of the work that was harder to get right than it looks — lands in <strong>Assumptions Made</strong> or <strong>Where the Agent Struggled</strong> instead. A future session doesn't blindly respect an outdated constraint, and it doesn't mistake something fragile for something solid either.</p>
+    </div>
+  </div>
+</section>
+
+<!-- WHY IT WORKS -->
+<section class="why-section">
+  <div class="why-inner">
+    <span class="section-eyebrow">Why It Works</span>
+    <h2 class="section-title">Three commands, three different jobs</h2>
+    <div class="why-blocks">
+      <div class="why-block">
+        <div class="why-line-indigo"></div>
+        <div>
+          <div class="why-title">Structured format does the compression before the document enters context</div>
+          <div class="why-body">Contrast dumping raw chat history: Claude sees a wall of text with no signal about what matters. The archaeology format extracts the signal before Claude reads it. Each section signals what's load-bearing — Summary orients in ten seconds, Roads Not Taken surface the guard rails, Key Discoveries prevent re-discovery of hard-won knowledge, and Assumptions Made / Where the Agent Struggled flag reliability, not just content — where to look twice even when nothing looks obviously wrong.</div>
+        </div>
+      </div>
+      <div class="why-block">
+        <div class="why-line-mint"></div>
+        <div>
+          <div class="why-title">Subagents keep your context window clean</div>
+          <div class="why-body">For large loads (3+ session files), <code>/opening</code> delegates to a subagent. The subagent reads all the documents and returns a finished synthesis — the raw archaeology never enters your context window. For <code>/opening search</code>, the subagent always runs regardless of file count, because question-answering across a history of decisions is exactly the kind of synthesis a subagent handles well.</div>
+        </div>
+      </div>
+      <div class="why-block">
+        <div class="why-line-steel"></div>
+        <div>
+          <div class="why-title">The report solves the 30-session problem</div>
+          <div class="why-body">At scale, the question shifts from "what happened last time?" to "what is the accumulated state of all deferred work, locked constraints, standing assumptions, and fragile areas across the entire project history?" The <code style="font-family:var(--mono);font-size:0.8rem;color:var(--indigo)">last_session</code> cursor in the report frontmatter means you don't re-pay the synthesis cost on history already captured — subsequent runs only process new sessions.</div>
+        </div>
+      </div>
+      <div class="why-block">
+        <div class="why-line-both"></div>
+        <div>
+          <div class="why-title">Together they mean no session starts cold</div>
+          <div class="why-body"><code>/closing</code> captures the handoff before it's lost. <code>/opening</code> reads the handoff and orients the new session in seconds. <code>/report</code> collapses accumulated sessions into one load when individual files become too many to read. Each command operates at a different time horizon — and together they cover the full lifecycle of a project that outlasts any single context window.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INSTALL -->
+<section class="install-section" id="install">
+  <div class="install-inner">
+    <span class="section-eyebrow section-eyebrow-mint">Installation</span>
+    <h2 class="section-title">30 seconds. No config. No restart.</h2>
+    <p class="section-body" style="max-width:680px;color:var(--white-dim);font-size:0.95rem">Install globally — these commands are useful in every project, not just one. Claude Code picks up .md files in commands/ directories automatically.</p>
+
+    <div class="install-steps">
+      <div class="install-step">
+        <div class="install-step-num">01</div>
+        <div>
+          <div class="install-step-title">Clone the repo</div>
+          <div class="install-step-body">Gets the commands, hook scripts, and install script onto your machine.</div>
+          <div class="code-block">git clone https://github.com/revans/simple-context-memory</div>
+        </div>
+      </div>
+      <div class="install-step">
+        <div class="install-step-num">02</div>
+        <div>
+          <div class="install-step-title">Run the install script</div>
+          <div class="install-step-body">Copies commands to <code style="font-family:var(--mono);font-size:0.78rem;color:var(--mint)">~/.claude/commands/</code>, hooks to <code style="font-family:var(--mono);font-size:0.78rem;color:var(--mint)">~/.claude/hooks/</code>, and checks whether hooks are wired in <code style="font-family:var(--mono);font-size:0.78rem;color:var(--mint)">settings.json</code> — printing the required JSON if not. Existing files are overwritten without prompting.</div>
+          <div class="code-block">bash simple-context-memory/init.sh</div>
+        </div>
+      </div>
+      <div class="install-step">
+        <div class="install-step-num">03</div>
+        <div>
+          <div class="install-step-title">That's it</div>
+          <div class="install-step-body">Open any Claude Code session and run <code style="font-family:var(--mono);font-size:0.78rem;color:var(--mint)">/opening</code> to start. The first session will tell you there are no previous sessions yet — run <code style="font-family:var(--mono);font-size:0.78rem;color:var(--mint)">/closing</code> before you end it.</div>
+          <div class="code-block"><span class="comment"># In any Claude Code session:</span>
+/opening        <span class="comment"># load context</span>
+<span class="comment"># ... do your work ...</span>
+/closing        <span class="comment"># save before you leave</span></div>
+        </div>
+      </div>
+      <div class="install-step">
+        <div class="install-step-num">04</div>
+        <div>
+          <div class="install-step-title">Optional — wire the compaction hooks</div>
+          <div class="install-step-body">The install script handles this if you ran it. If you installed manually, add this to <code style="font-family:var(--mono);font-size:0.78rem;color:var(--mint)">~/.claude/settings.json</code> to enable the three-layer compaction defence.</div>
+          <div class="code-block">{
+  "hooks": {
+    "UserPromptSubmit": [{ "type": "command",
+      "command": "python3 ~/.claude/hooks/context-watch.py" }],
+    "PreCompact": [{ "type": "command",
+      "command": "python3 ~/.claude/hooks/pre-compact.py" }],
+    "PostCompact": [{ "type": "command",
+      "command": "python3 ~/.claude/hooks/post-compact.py" }]
+  }
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:2rem;padding:1.4rem 1.8rem;background:rgba(61,214,181,0.04);border:1px solid rgba(61,214,181,0.15);max-width:860px">
+      <div style="font-family:var(--mono);font-size:0.65rem;color:var(--mint);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.5rem">Output lives with your project</div>
+      <p style="font-size:0.84rem;color:var(--white-dim);line-height:1.8">The commands are global (<code style="font-family:var(--mono);font-size:0.75rem;color:var(--mint)">~/.claude/commands/</code>). The output files are local to each project under <code style="font-family:var(--mono);font-size:0.75rem;color:var(--mint)">docs/sessions/</code> and <code style="font-family:var(--mono);font-size:0.75rem;color:var(--mint)">docs/reports/</code>. Commit both to your repo — the session history and the report are the institutional memory of the project and belong in version control next to the code.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ATTRIBUTION -->
+<div class="attribution">
+  <p>Simple Context Memory — by <a href="http://robertrevans.com">Robert Evans</a> &nbsp;·&nbsp; <a href="https://github.com/revans/simple-context-memory">github.com/revans/simple-context-memory</a> &nbsp;·&nbsp; MIT License</p>
+</div>
+
+<script>
+// AMNESIA ANIMATION
+const lines = ['tl-1','tl-2','tl-3','tl-4','tl-5'];
+const label = document.getElementById('amnesia-label');
+
+function runAmnesia() {
+  // Reset
+  lines.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.opacity = '1';
+  });
+  label.classList.remove('visible');
+
+  // After 2s, start wiping lines one by one
+  setTimeout(() => {
+    lines.forEach((id, i) => {
+      setTimeout(() => {
+        const el = document.getElementById(id);
+        if(el) {
+          el.style.transition = 'opacity 0.3s';
+          el.style.opacity = '0';
+        }
+        if(i === lines.length - 1) {
+          setTimeout(() => { label.classList.add('visible'); }, 400);
+        }
+      }, i * 200);
+    });
+  }, 2000);
+
+  // Restart cycle
+  setTimeout(runAmnesia, 5500);
+}
+
+runAmnesia();
+
+// Scroll fade-in
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(el => { if(el.isIntersecting) el.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.cmd-block').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>

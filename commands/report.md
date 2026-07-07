@@ -1,6 +1,6 @@
 ---
 name: Report
-description: Reads session documents and produces a project state report — consolidated open deferrals and Do Not constraints, each linked back to their source session. Always writes to docs/reports/report.md (single file, overwritten each run). Incremental by default — only reads sessions since the last report. Use /report full to force a complete rebuild.
+description: Reads session documents and produces a project state report — consolidated open deferrals, Do Not constraints, standing assumptions, and fragile areas, each linked back to their source session. Always writes to docs/reports/report.md (single file, overwritten each run). Incremental by default — only reads sessions since the last report. Use /report full to force a complete rebuild.
 color: blue
 arguments:
   - full (optional) — force a complete rebuild from all sessions
@@ -88,7 +88,11 @@ An item is **still open** if no later session references it, or if a later sessi
 
 Collect every **Do not [X] because [Y]** constraint from **Roads Not Taken** across all sessions.
 
-Produce the two sections described below.
+Collect every entry from **Assumptions Made** across all sessions. An assumption is **resolved** (drop it) if a later session's **Why We Did It This Way** or **Key Discoveries** explicitly confirms it holds or explicitly overturns it. Otherwise it's **standing** — still true as far as anyone has checked, and still worth a future reader's attention.
+
+Collect every entry from **Where the Agent Struggled** across all sessions. A flagged area is **resolved** if a later session revisits it and settles the ambiguity or confirms the fragile part held up under further work. Otherwise it stays **flagged**. If the same fragile area recurs across multiple sessions without ever getting resolved, note the recurrence explicitly — a repeatedly-struggled-with area is a stronger signal than a single mention.
+
+Produce the four sections described below.
 
 ---
 
@@ -107,13 +111,26 @@ You have an existing report (the baseline) and a set of new sessions to process.
 2. Collect any new constraints from each new session's **Roads Not Taken** and add them
 3. If a new constraint is substantively identical to an existing one, keep it once and note it recurred
 
-Produce the two sections described below with the fully updated content.
+**For Standing Assumptions:**
+1. Start with the existing report's Standing Assumptions list as your working set
+2. Read each new session in order
+3. For each item in the working set, check whether a new session's **Why We Did It This Way** or **Key Discoveries** confirms or overturns it — remove it if so
+4. Collect any new entries from each new session's **Assumptions Made** and add them to the working set
+
+**For Fragile Areas:**
+1. Start with the existing report's Fragile Areas list as your working set
+2. Read each new session in order
+3. For each item in the working set, check whether a new session resolves the ambiguity or confirms the area held up — remove it if so
+4. Collect any new entries from each new session's **Where the Agent Struggled** and add them to the working set
+5. If a new entry is substantively the same fragile area as an existing one, keep it once and note it recurred
+
+Produce the four sections described below with the fully updated content.
 
 ---
 
 ### What to produce
 
-Two sections. For each item, include a markdown link to the source session using a relative path from `docs/reports/` — e.g. `[2026-05-19-stripe-webhook](../sessions/2026-05-19-1531-stripe-webhook.md)`.
+Four sections. For each item, include a markdown link to the source session using a relative path from `docs/reports/` — e.g. `[2026-05-19-stripe-webhook](../sessions/2026-05-19-1531-stripe-webhook.md)`.
 
 ---
 
@@ -138,6 +155,30 @@ For each constraint:
 - Source: `[session-slug](../sessions/filename.md)`
 
 If there are no Do Not constraints, say so explicitly.
+
+---
+
+### Standing Assumptions
+
+Every entry from **Assumptions Made** across all sessions covered that hasn't been explicitly confirmed or overturned by a later session. These are implicit choices nobody consciously decided — the report surfaces them because nothing else will; they don't show up as a "decision" anywhere.
+
+For each assumption:
+- The assumption in plain language, and what would break if it turns out wrong
+- Source: `[session-slug](../sessions/filename.md)`
+
+If there are no standing assumptions, say so explicitly.
+
+---
+
+### Fragile Areas
+
+Every entry from **Where the Agent Struggled** across all sessions covered that hasn't been resolved by later work. This is a confidence map, not a to-do list — it tells a reader where to apply extra scrutiny, even for things that technically "work." If the same fragile area recurs across multiple sessions, note the recurrence explicitly — that's a stronger signal than a single mention.
+
+For each fragile area:
+- What was struggled with, in plain language
+- Source: `[session-slug](../sessions/filename.md)`
+
+If there are no fragile areas, say so explicitly.
 
 ---
 
@@ -173,3 +214,5 @@ Output:
 - Total sessions the report now reflects
 - Number of open deferrals
 - Number of Do Not constraints
+- Number of standing assumptions
+- Number of fragile areas

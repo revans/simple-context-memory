@@ -4,7 +4,7 @@ Every time you start a Claude Code session, Claude wakes up with complete amnesi
 
 The reflex solution is to save everything. Dump the whole context into memory files. Write system prompts with the entire project history. But that's just moving noise. Claude can't tell which of the forty remembered facts is the one that matters right now, and you end up with a model that confidently re-litigates decisions you already settled.
 
-What you actually need is what surgeons use during a shift handoff: not a diary, not a log — a **handoff note**. What did we do, why did we do it this way, what did we explicitly reject, and what's still open? That's it. Everything else is reconstruction that Claude can do from the code.
+What you actually need is what surgeons use during a shift handoff: not a diary, not a log — a **handoff note**. What did we do, why did we do it this way, what did we explicitly reject, what did we assume without ever deciding it, where did the work get shaky, and what's still open? That's it. Everything else is reconstruction that Claude can do from the code.
 
 This repo gives you three Claude Code slash commands that implement exactly that system.
 
@@ -34,13 +34,13 @@ Think of it like reading the previous surgeon's handoff note before you scrub in
 
 ### `/closing` — Write an archaeology document at the end of a session
 
-Captures everything worth preserving from the session: what was built, why it was done this way (including the reasoning that prevents future sessions from re-litigating it), what was considered and rejected, and what's explicitly open. Saves it to `docs/sessions/` with a timestamp filename so the chain of sessions becomes traceable.
+Captures everything worth preserving from the session: what was built, why it was done this way (including the reasoning that prevents future sessions from re-litigating it), what was considered and rejected, what was implicitly assumed without ever being decided, where the work is more fragile than it looks, and what's explicitly open. Saves it to `docs/sessions/` with a timestamp filename so the chain of sessions becomes traceable.
 
-"Archaeology" is the right word here — the document records the *decisions*, not just the *artifacts*. The code already shows you what was built. Only this document shows you why the obvious alternative wasn't chosen.
+"Archaeology" is the right word here — the document records the *decisions*, not just the *artifacts*. The code already shows you what was built. Only this document shows you why the obvious alternative wasn't chosen, and where to be careful even when nothing looks obviously wrong.
 
 ### `/report` — Synthesize open work across all sessions
 
-Reads every session document and produces a single project state report at `docs/reports/report.md`. Two sections: every still-open deferral (cross-referenced against later sessions to confirm it was never resolved), and every Do Not constraint accumulated across all Roads Not Taken. Each item links back to the session it came from.
+Reads every session document and produces a single project state report at `docs/reports/report.md`. Four sections: every still-open deferral (cross-referenced against later sessions to confirm it was never resolved), every Do Not constraint accumulated across all Roads Not Taken, every standing assumption nobody has yet confirmed or overturned, and every fragile area still flagged as needing extra scrutiny. Each item links back to the session it came from.
 
 Run it when sessions start accumulating. At 20+ sessions, loading the report plus the 2-3 most recent sessions gives you the same orientation as loading everything — with a fraction of the token cost.
 
@@ -229,13 +229,15 @@ cp simple-context-memory/scripts/post-compact.py ~/.claude/hooks/post-compact.py
 
 ### What /closing writes
 
-Claude writes a session document to `docs/sessions/` with a timestamp filename. The document covers seven sections:
+Claude writes a session document to `docs/sessions/` with a timestamp filename. The document covers nine sections:
 
 - **Summary** — 2-3 sentences: what the session was about, the most important change, and what the next session picks up. Written to orient in ten seconds without reading anything else.
 - **What We Did** — specific things built or decided (file paths, function names, design choices)
 - **Why We Did It This Way** — the reasoning, so future sessions don't re-litigate it
 - **Roads Not Taken** — what was proposed and rejected, and why. Each entry ends with a bold **Do not [X] because [Y]** constraint — the guard rail a future session sees before it starts reasoning about the problem
 - **Key Discoveries** — questions answered during the session, formatted as question → answer pairs. Root causes traced, misconceptions corrected, empirical findings. What a future session needs to know so it doesn't re-discover it
+- **Assumptions Made** — implicit choices filled in without ever being explicitly decided. Different from Roads Not Taken, which covers alternatives that were actually named and considered — an assumption is a gap nobody flagged as a choice at all, so a future reader can't audit it unless it's written down here
+- **Where the Agent Struggled** — a confidence signal, not a content claim. Which specific parts took multiple attempts, hit genuine ambiguity, or landed with lower confidence than the rest, even though an answer still shipped. Tells a future reader where to apply extra scrutiny before building on top of something that looks solid but wasn't easy to produce
 - **Open Questions & Next Steps** — what was deferred, left unresolved, or suggested but not acted on. Includes action items, half-decisions, and review findings noted for later
 - **Files Changed** — what changed and where, plus any constraint a future session needs before touching that file again
 
@@ -296,6 +298,22 @@ Would need revisiting if the retry window ever expands past 24 hours.
 → Returns the original response without re-executing the charge. No side effects.
 This is the core reason the local table was redundant.
 
+## Assumptions Made
+
+Assumed the incoming webhook payload's `stripe_event_id` is unique per logical charge
+attempt across retries — never explicitly verified against Stripe's webhook-retry
+documentation, just inferred from observed behavior in staging. If Stripe ever reuses
+an event ID across what should be two distinct charge attempts, this idempotency
+strategy would silently swallow a legitimate second charge.
+
+## Where the Agent Struggled
+
+Confirming the 24-hour idempotency window took three different searches through
+Stripe's docs before finding the number stated explicitly — the first two sources
+described the behavior without giving a concrete duration. Treat that number as
+solid (it's directly cited now), but the process of finding it was harder than it
+should have been, which is itself worth knowing if this needs re-verifying later.
+
 ## Open Questions & Next Steps
 
 - Do we want to log the `Idempotency-Key` values we send to Stripe for audit purposes,
@@ -310,7 +328,7 @@ This is the core reason the local table was redundant.
 - `spec/services/payment_processor_spec.rb` — removed idempotency table fixtures
 ```
 
-Notice what this document does that the code and git history don't: the Do Not constraint in Roads Not Taken tells a future session not to reintroduce a local store before it even starts thinking about the problem. The Key Discoveries section records that Stripe's 24-hour window was explicitly verified against the retry policy — not just assumed. Six months from now, when someone wonders "did we ever consider a Redis cache here?" — the answer is one grep away.
+Notice what this document does that the code and git history don't: the Do Not constraint in Roads Not Taken tells a future session not to reintroduce a local store before it even starts thinking about the problem. The Key Discoveries section records that Stripe's 24-hour window was explicitly verified against the retry policy — not just assumed. The Assumptions Made section flags the one thing that *wasn't* verified — event-ID uniqueness across retries — so a future reader knows exactly where the unverified edge is instead of discovering it the hard way. Six months from now, when someone wonders "did we ever consider a Redis cache here?" — the answer is one grep away.
 
 **Scoped closing** — if you only want to capture one specific decision or topic rather than the full session:
 
@@ -330,7 +348,7 @@ Once sessions start accumulating, run:
 /report
 ```
 
-Claude reads all session documents, identifies every Open Questions & Next Steps item that was never resolved in a later session, collects every Do Not constraint from Roads Not Taken, and writes a single report to `docs/reports/report.md`. Each item links back to the session it came from.
+Claude reads all session documents, identifies every Open Questions & Next Steps item that was never resolved in a later session, collects every Do Not constraint from Roads Not Taken, every standing Assumption Made that was never confirmed or overturned, and every Fragile Area from Where the Agent Struggled that was never resolved by later work — then writes a single report to `docs/reports/report.md`. Each item links back to the session it came from.
 
 The report is always one file — it overwrites on each run. The frontmatter tracks `last_session`, the filename of the newest session the report covers. On the next run, `/report` reads that cursor and only processes sessions after it, so you're not re-reading 50 files when 3 are new.
 
@@ -359,7 +377,7 @@ docs/
 
 **Session files** are the raw archaeology — one file per session, timestamp-named so they sort chronologically. Human-readable. You can open them, grep them, or read them directly.
 
-**`report.md`** is the synthesized current state — open deferrals and Do Not constraints across all sessions, each linked back to its source. It's a checkpoint, not an archive. When you have 20+ sessions, loading the report plus 2-3 recent sessions gives the same orientation as loading everything.
+**`report.md`** is the synthesized current state — open deferrals, Do Not constraints, standing assumptions, and fragile areas across all sessions, each linked back to its source. It's a checkpoint, not an archive. When you have 20+ sessions, loading the report plus 2-3 recent sessions gives the same orientation as loading everything.
 
 Commit both to your repo. The session history and the report together are the institutional memory of the project — they belong in version control next to the code.
 
@@ -379,9 +397,9 @@ Think of a surgical shift handoff. When one surgeon hands off to another, they d
 - **Recommendation** — what needs to happen next?
 - **Contingency** — what assumptions were made that, if they change, would reopen a closed decision?
 
-This reasoning doesn't produce extra sections. It surfaces content for the sections that already exist — and crucially, it catches contingencies before they get buried. A contingency lands as a conditional in the Do Not line: *Do not X because Y — unless Z, in which case reconsider.* That way the guard rail carries its own expiry condition.
+This reasoning doesn't produce extra sections beyond the two it's specifically built to feed. It surfaces content for the sections that already exist — and crucially, it catches contingencies before they get buried. A contingency tied to a decision lands as a conditional in the Do Not line: *Do not X because Y — unless Z, in which case reconsider.* That way the guard rail carries its own expiry condition. A contingency *not* tied to any decision — an assumption nobody consciously made, or a place where the work was harder to get right than it looks — lands in Assumptions Made or Where the Agent Struggled instead. Both are reliability signals: not what was decided, but how much to trust what got produced.
 
-The structured format — Summary, What We Did, Why We Did It This Way, Roads Not Taken, Key Discoveries, Open Questions — does the compression work *before* the document enters context. Each section signals to Claude what's load-bearing. Contrast this with dumping raw chat history: Claude sees a wall of text with no signal about what matters. The structured document extracts the signal so Claude doesn't have to.
+The structured format — Summary, What We Did, Why We Did It This Way, Roads Not Taken, Key Discoveries, Assumptions Made, Where the Agent Struggled, Open Questions — does the compression work *before* the document enters context. Each section signals to Claude what's load-bearing. Contrast this with dumping raw chat history: Claude sees a wall of text with no signal about what matters. The structured document extracts the signal so Claude doesn't have to.
 
 ### Why `/opening` works
 
@@ -393,7 +411,7 @@ For large loads (3+ session files), `/opening` delegates to a subagent. The suba
 
 At scale, the problem shifts. One session document answers "what happened last time?" Thirty session documents answer a harder question: "what is the accumulated state of all deferred work and locked constraints across the entire project history?" You can't load thirty files every session.
 
-`/report` collapses that history into a single document: every still-open deferral, every Do Not constraint, each linked to its source session. The cursor mechanism (`last_session` in the frontmatter) means subsequent runs only process new sessions — you don't re-pay the synthesis cost on history already captured.
+`/report` collapses that history into a single document: every still-open deferral, every Do Not constraint, every standing assumption nobody has confirmed or overturned, every fragile area still flagged as needing scrutiny — each linked to its source session. The cursor mechanism (`last_session` in the frontmatter) means subsequent runs only process new sessions — you don't re-pay the synthesis cost on history already captured.
 
 ### How they work together
 
