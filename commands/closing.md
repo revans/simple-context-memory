@@ -24,7 +24,7 @@ Carry the scope (or "full session" if none) forward — it determines what conte
 
 ---
 
-## Step 1 — Get the timestamp and find the previous session
+## Step 1 — Get the timestamp, session ID, and find the previous session
 
 Run:
 ```bash
@@ -32,6 +32,13 @@ date +"%Y-%m-%d-%H%M"
 ```
 
 This is the timestamp for the filename.
+
+Then run:
+```bash
+echo "$CLAUDE_CODE_SESSION_ID"
+```
+
+This is the current session's resumable ID — the same ID `claude --resume <id>` takes to reopen this exact conversation later. If it's empty (running outside the Claude Code CLI, or the variable is unavailable), record `session_id: null` in the frontmatter instead — do not fabricate one.
 
 Then check if `docs/sessions/` already exists and find the most recently modified session file:
 ```bash
@@ -42,13 +49,15 @@ Note that filename — it becomes `previous_session` in the frontmatter.
 
 ---
 
-## Step 2 — Derive the slug
+## Step 2 — Derive the slug and one-line description
 
 If a scope argument was provided, derive the slug directly from `$scope` (kebab-case, 2–4 words).
 
 If no argument, infer the slug from the session content. Examples: `agent-studio-toolchain`, `hero-skill-extraction-intents`, `hub-session-lifecycle`.
 
 The filename is: `{{timestamp}}-{{slug}}.md`
+
+Also write a one-line `session_description` (a single plain sentence, commit-subject length — under ~100 characters). This is distinct from the `## Summary` section in the body: the description is for scanning many sessions at a glance (e.g. by `/reopen`) without parsing markdown; the Summary section is the fuller 2-3 sentence orientation for a human or agent reading this one document.
 
 ---
 
@@ -61,6 +70,8 @@ mkdir -p docs/sessions
 ---
 
 ## Step 4 — Write the document
+
+Before populating any section, apply this memory discipline: **recall what you believed at the start of this session, then write a memory only when the outcome contradicts it.** When something does contradict, write the corrected belief, not the event: not "I tried X and Y happened" but "X does not cause Y" or "actually Z is how this works." This keeps the document from becoming an event log and keeps it useful as a belief system a future session can actually build on.
 
 Before writing, reason through the session using SBAR-C as a completeness check:
 
@@ -83,6 +94,8 @@ date: {{YYYY-MM-DD}}
 time: {{HH:MM}}
 working_directory: {{absolute path}}
 previous_session: {{filename of previous session, or null}}
+session_id: {{value of $CLAUDE_CODE_SESSION_ID, or null}}
+session_description: {{one-line plain-sentence description, distinct from Summary below}}
 ---
 
 # Session: {{slug in title case}}
@@ -197,3 +210,4 @@ After writing the file, output:
 - The full file path
 - The word count
 - The previous session filename (if any), so the user can see the chain
+- The session_id recorded (or a note that it was unavailable), so the user knows whether `/reopen` can jump back into this exact conversation later

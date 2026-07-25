@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# claude-reopen — pick a past Claude Code session (by its docs/sessions/*.md
+# checkpoint) and hand the terminal over to `claude --resume <session_id>`.
+#
+# Run this from a plain shell prompt, inside the project whose session you
+# want, NOT from inside an already-running claude session — it needs to
+# exec() into the resumed session, which only works when nothing else is
+# already occupying this process.
+set -euo pipefail
+
+sessions_dir="docs/sessions"
+
+if [ ! -d "$sessions_dir" ]; then
+  echo "No $sessions_dir found in $(pwd) — cd into a project with session docs first." >&2
+  exit 1
+fi
+
+get_field() {
+  local file="$1" field="$2"
+  awk -v f="^${field}:" '
+    /^---$/ { c++; if (c==2) exit; next }
+    c==1 && $0 ~ f {
+      sub(f"[ ]*", "")
+      print
+      exit
+    }
+  ' "$file"
+}
+
+declare -A seen_ids
+rows=()
+
+while IFS= read -r file; do
+  sid="$(get_field "$file" "session_id")"
+  sid="${sid%\"}"; sid="${sid#\"}"
+  [ -z "$sid" ] && continue
+  [ "$sid" = "null" ] && continue
+  [ -n "${seen_ids[$sid]:-}" ] && continue  # keep only the most recent doc per session
+
+  seen_ids[$sid]=1
+  date_val="$(get_field "$file" "date")"
+  time_val="$(get_field "$file" "time")"
+  desc="$(get_field "$file" "session_description")"
+  [ -z "$desc" ] && desc="(no description recorded)"
+  rows+=("$sid"$'\t'"$date_val $time_val  $desc")
+done < <(ls -t "$sessions_dir"/*.md 2>/dev/null)
+
+if [ "${#rows[@]}" -eq 0 ]; then
+  echo "No resumable sessions found under $sessions_dir (none have a recorded session_id)." >&2
+  exit 1
+fi
+
+if command -v fzf >/dev/null 2>&1; then
+  selected="$(printf '%s\n' "${rows[@]}" | fzf --delimiter=$'\t' --with-nth=2 --prompt="Reopen session > " --query="${1:-}")"
+else
+  echo "Select a session to reopen:"
+  i=1
+  for row in "${rows[@]}"; do
+    echo "  $i) ${row#*$'\t'}"
+    i=$((i + 1))
+  done
+  read -rp "Number: " choice
+  if ! [[ "$choice" =~ ^[0-9]+$ ]] || (( choice < 1 || choice > ${#rows[@]} )); then
+    echo "Invalid selection." >&2
+    exit 1
+  fi
+  selected="${rows[$((choice - 1))]}"
+fi
+
+[ -z "${selected:-}" ] && { echo "No selection made." >&2; exit 1; }
+
+session_id="${selected%%$'\t'*}"
+
+echo "Resuming session $session_id ..."
+exec claude --resume "$session_id" --dangerously-skip-permissions

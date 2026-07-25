@@ -12,6 +12,7 @@ mkdir -p ~/.claude/commands
 cp "$REPO_DIR/commands/opening.md"  ~/.claude/commands/opening.md
 cp "$REPO_DIR/commands/closing.md"  ~/.claude/commands/closing.md
 cp "$REPO_DIR/commands/report.md"   ~/.claude/commands/report.md
+cp "$REPO_DIR/commands/reopen.md"   ~/.claude/commands/reopen.md
 echo "  [ok] Commands installed to ~/.claude/commands/"
 
 # Hook scripts
@@ -20,6 +21,21 @@ cp "$REPO_DIR/scripts/context-watch.py" ~/.claude/hooks/context-watch.py
 cp "$REPO_DIR/scripts/pre-compact.py"   ~/.claude/hooks/pre-compact.py
 cp "$REPO_DIR/scripts/post-compact.py"  ~/.claude/hooks/post-compact.py
 echo "  [ok] Hook scripts installed to ~/.claude/hooks/"
+
+# claude-reopen — standalone shell tool, not a slash command or a hook.
+# It has to run from a plain terminal (not from inside an active session)
+# so it can exec() into `claude --resume <id>` in place; a slash command
+# can't do that since it runs inside the session process it would need to replace.
+mkdir -p ~/.local/bin
+cp "$REPO_DIR/scripts/claude-reopen" ~/.local/bin/claude-reopen
+chmod +x ~/.local/bin/claude-reopen
+echo "  [ok] claude-reopen installed to ~/.local/bin/"
+
+case ":$PATH:" in
+    *":$HOME/.local/bin:"*) ;;
+    *) echo "  [action required] ~/.local/bin is not on your \$PATH — add it (e.g. in ~/.bashrc or ~/.zshrc):"
+       echo "      export PATH=\"\$HOME/.local/bin:\$PATH\"" ;;
+esac
 
 # Check whether hooks are already wired in settings.json
 SETTINGS="$HOME/.claude/settings.json"

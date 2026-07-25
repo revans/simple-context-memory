@@ -6,7 +6,7 @@ The reflex solution is to save everything. Dump the whole context into memory fi
 
 What you actually need is what surgeons use during a shift handoff: not a diary, not a log — a **handoff note**. What did we do, why did we do it this way, what did we explicitly reject, what did we assume without ever deciding it, where did the work get shaky, and what's still open? That's it. Everything else is reconstruction that Claude can do from the code.
 
-This repo gives you three Claude Code slash commands that implement exactly that system.
+This repo gives you three Claude Code slash commands that implement exactly that system — plus a fourth for a different problem: sometimes the handoff note isn't enough and you want the *actual conversation* back, untouched, not a summary of it.
 
 ---
 
@@ -18,6 +18,7 @@ This repo gives you three Claude Code slash commands that implement exactly that
   - [Starting a session](#starting-a-session)
   - [Ending a session](#ending-a-session)
   - [Generating a report](#generating-a-report)
+  - [Reopening an exact session](#reopening-an-exact-session)
   - [Hooks](#hooks)
 - [The docs/ directory](#the-docs-directory)
 - [Why this works](#why-this-works)
@@ -46,6 +47,12 @@ Run it when sessions start accumulating. At 20+ sessions, loading the report plu
 
 Incremental by default — tracks which sessions it has already processed and only reads new ones on subsequent runs. Use `/report full` to rebuild from scratch.
 
+### `/reopen` — Jump back into a specific past session, not just its summary
+
+`/opening` gives you a curated brief; `/reopen` gives you the actual conversation back. It searches `docs/sessions/*.md` by keyword (or lists the most recent ones with no argument), groups matches by `session_id` — one long session can be checkpointed by `/closing` more than once, and those checkpoints shouldn't be shown as separate sessions — and prints the exact `claude --resume <id>` command for the one you meant.
+
+It cannot run that command for you. A slash command executes inside the session you're already in; resuming a different session means starting a *new* process, and nothing running inside a phone call can reach out and swap it for a different call. `/reopen`'s job stops at handing you the right number to dial — see [Reopening an exact session](#reopening-an-exact-session) for the paired shell tool that actually dials it.
+
 ---
 
 ## Installation
@@ -58,8 +65,9 @@ your-project/
 └── .claude/
     └── commands/
         ├── opening.md
-        └── closing.md
-        └── report.md
+        ├── closing.md
+        ├── report.md
+        └── reopen.md
 ```
 
 **User-level (global)** — available in every project on your machine:
@@ -68,8 +76,11 @@ your-project/
 └── commands/
     ├── opening.md
     ├── closing.md
-    └── report.md
+    ├── report.md
+    └── reopen.md
 ```
+
+`claude-reopen` (the shell tool paired with `/reopen`) isn't a slash command, so it doesn't live in either `commands/` directory — see [Reopening an exact session](#reopening-an-exact-session) for why and where it installs instead.
 
 ### Steps
 
@@ -85,7 +96,7 @@ Install globally — these commands are useful in every project, not just one.
    bash simple-context-memory/init.sh
    ```
 
-   This copies the commands to `~/.claude/commands/`, the hook scripts to `~/.claude/hooks/`, and checks whether the hooks are wired in `~/.claude/settings.json` — printing the required JSON snippet if not.
+   This copies the commands to `~/.claude/commands/`, the hook scripts to `~/.claude/hooks/`, `claude-reopen` to `~/.local/bin/`, and checks whether the hooks are wired in `~/.claude/settings.json` — printing the required JSON snippet if not.
 
    **Note:** existing files are overwritten without prompting. If you have customized your local copies of these commands, back them up before running.
 
@@ -95,6 +106,7 @@ Install globally — these commands are useful in every project, not just one.
    cp simple-context-memory/commands/opening.md ~/.claude/commands/
    cp simple-context-memory/commands/closing.md ~/.claude/commands/
    cp simple-context-memory/commands/report.md ~/.claude/commands/
+   cp simple-context-memory/commands/reopen.md ~/.claude/commands/
    ```
 
 3. _(Optional, manual only)_ Install the compaction hooks:
@@ -106,7 +118,15 @@ Install globally — these commands are useful in every project, not just one.
    ```
    See [Hooks](#hooks) for the `~/.claude/settings.json` configuration and what each script does.
 
-4. That's it. Claude Code picks up `.md` files in `commands/` directories automatically — no config, no restart.
+4. _(Optional, manual only)_ Install `claude-reopen`:
+   ```bash
+   mkdir -p ~/.local/bin
+   cp simple-context-memory/scripts/claude-reopen ~/.local/bin/claude-reopen
+   chmod +x ~/.local/bin/claude-reopen
+   ```
+   Make sure `~/.local/bin` is on your `$PATH`. See [Reopening an exact session](#reopening-an-exact-session) for usage.
+
+5. That's it. Claude Code picks up `.md` files in `commands/` directories automatically — no config, no restart.
 
 If you only want them in a single project instead:
 ```bash
@@ -114,6 +134,7 @@ mkdir -p your-project/.claude/commands
 cp simple-context-memory/commands/opening.md your-project/.claude/commands/
 cp simple-context-memory/commands/closing.md your-project/.claude/commands/
 cp simple-context-memory/commands/report.md your-project/.claude/commands/
+cp simple-context-memory/commands/reopen.md your-project/.claude/commands/
 ```
 
 ---
@@ -250,6 +271,8 @@ date: 2026-05-19
 time: 14:32
 working_directory: /home/dev/projects/billing-api
 previous_session: 2026-05-16-0914-stripe-webhook-setup.md
+session_id: 7f3a2c1e-9b4d-4e6f-8a1c-2d5e6f7a8b9c
+session_description: Dropped the local idempotency table in favor of Stripe's native idempotency keys.
 ---
 
 # Session: Drop Idempotency Table
@@ -357,6 +380,33 @@ The report is always one file — it overwrites on each run. The frontmatter tra
 ```
 
 Use `full` after a `/closing` that may have resolved items the report has as open, or any time you want a clean rebuild.
+
+---
+
+### Reopening an exact session
+
+`/opening` and `/report` reconstruct context from a written summary. Sometimes that's not what you want — you want the literal conversation back, every tool call and every line of reasoning, with nothing compressed out. That's what `/reopen` and `claude-reopen` are for.
+
+**Inside a session**, run:
+```
+/reopen webhook auth
+```
+It searches `docs/sessions/*.md` for matches, groups them by the recorded `session_id` (so one conversation checkpointed twice by `/closing` shows up once, not twice), and — if it resolves to exactly one session — prints the command that reopens it:
+```
+claude --resume f2638028-978a-4580-8833-62e23d9e0234 --dangerously-skip-permissions
+```
+If more than one distinct session matches, it asks you to pick. Either way, it stops there: **it never runs the command itself.** A slash command executes inside the session you're already in — resuming a different one means starting a brand-new process, and nothing already on a call can reach out and swap it for a different one. You have to run the printed command yourself, in a terminal.
+
+**From a terminal**, that's what `claude-reopen` is for — it's the tool that can actually do the swap, because it isn't running inside a session to begin with:
+```
+$ cd your-project
+$ claude-reopen
+```
+It reads the same `docs/sessions/*.md` frontmatter, groups by `session_id` the same way, and shows an interactive picker (`fzf` if installed, a plain numbered menu otherwise) labeled by date and `session_description`. Pick one, and it hands the terminal over with `exec claude --resume <id>` — replacing itself with the resumed session rather than spawning a child process, so it behaves exactly as if you'd typed the resume command yourself.
+
+Pass a search term to pre-filter the picker: `claude-reopen webhook auth`.
+
+Session docs written before this feature existed have no `session_id` — both tools treat those as readable via `/opening` but not resumable, rather than guessing an ID.
 
 ---
 
