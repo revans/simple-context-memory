@@ -1,9 +1,9 @@
 ---
 name: Opening
-description: Start-of-session context loader. Reads session archaeology documents from docs/sessions/ to orient the agent for the current session.
+description: Start-of-session context loader. Reads session archaeology documents from docs/sessions/ to orient the agent for the current session, including pulling every checkpoint for a specific session_id in order.
 color: green
 arguments:
-  - mode (none) | 2 | <N> | today | yesterday | last-week | all | summary | search <question> | file <path>
+  - mode (none) | 2 | <N> | today | yesterday | last-week | all | summary | search <question> | session <session_id> | file <path>
 ---
 
 # Session Opening
@@ -27,6 +27,7 @@ The argument (if any) determines behavior:
 | `all` | **all** | Every file |
 | `summary` | **arc** | Every file, narrative output |
 | `search <question>` | **search** | Grep-narrowed candidates, then subagent answers the question |
+| `session <session_id>` | **session-id** | Every file whose frontmatter `session_id` matches, oldest to newest |
 | `file <path>` or bare path | **file** | The single specified file (absolute or relative path) |
 
 **Path detection:** if the argument is not one of the named keywords above and it either contains `/` or ends with `.md`, treat it as **file** mode automatically — no `file` prefix required.
@@ -78,6 +79,22 @@ ls docs/sessions/*.md 2>/dev/null | sort
 ```
 
 (Oldest-to-newest for coherent narrative.)
+
+### For session <session_id>:
+
+Extract the session_id — everything after `session` in the argument. Then find every doc stamped with that exact ID:
+
+```bash
+grep -l "^session_id: <session_id>$" docs/sessions/*.md 2>/dev/null | sort
+```
+
+`sort` is doing double duty here: session docs are named `YYYY-MM-DD-HHMM-slug.md`, so plain alphabetical order already **is** chronological order — no need to open files and compare timestamps separately.
+
+These matched files are not N separate sessions — they're one conversation, checkpointed by `/closing` more than once. Treat them as a single continuous session split across documents, and read them in the order this grep returns them (oldest first).
+
+If nothing matches, say so plainly: either the session_id was mistyped, or that session was never checkpointed with `/closing`.
+
+---
 
 ### For file:
 
@@ -176,7 +193,7 @@ Same structured brief as last-1. The document is a specific one you were directe
 
 ---
 
-### last-1 and last-2 (and date modes with 1–2 results)
+### last-1 and last-2 (and date modes, or session mode, with 1–2 results)
 
 Present a structured brief — not a raw dump. Include:
 
@@ -192,13 +209,17 @@ Present a structured brief — not a raw dump. Include:
 
 If reading two sessions, synthesize across both — what changed, what got resolved, what was added to the pending list, and whether a fragile spot from the first session got confirmed solid or stayed shaky in the second.
 
+For session mode specifically with two checkpoints: these are not two sessions, they're the same conversation checkpointed twice. Read the second checkpoint as the superseding, later state of anything the first also covers — don't present them as if two different sessions independently reached different conclusions.
+
 ---
 
-### last-N (3+), today, yesterday, last-week, all (when 3+ files)
+### last-N (3+), today, yesterday, last-week, all (when 3+ files), session mode (3+ checkpoints)
 
 Same structure as above, but organize by what's **still live** versus what's **resolved or shipped**. Resolved items get one line. Live items get the full treatment — state, why the decision was made, what's open. For assumptions and fragile spots specifically: drop any that a later session explicitly confirmed or resolved; keep and flag any that recur across multiple sessions without ever getting checked — a repeatedly-unverified assumption or a repeatedly-fragile area is a stronger signal than a single mention.
 
 For date-range modes (today, yesterday, last-week), group by session at the top — one line per session showing the slug and what it covered — then the synthesized brief below. This gives a "what happened in this period" overview before the detail.
+
+For session mode, do not group by "session" the way date-range modes do — every file already belongs to the same one session_id. Instead treat it as one arc: each checkpoint is a later snapshot of the same conversation, so later checkpoints supersede earlier ones wherever they overlap, and the same still-live-vs-resolved split applies within that single arc rather than across distinct sessions.
 
 ---
 
@@ -247,5 +268,7 @@ After presenting the brief or narrative, output one line:
 For single-session loads (including `file` mode), just: _Context loaded from 1 session: `{{filename}}`._
 
 For search mode: _Searched N session(s). Answer sourced from: `{{filename(s)}}`._
+
+For session mode, say checkpoints, not sessions — these files are one conversation, not N: _Context loaded from 1 session (`{{session_id}}`, N checkpoint(s)). Spanning: `{{oldest filename}}` → `{{most recent filename}}`._
 
 For delegated modes, the subagent outputs this line — present it as-is.
