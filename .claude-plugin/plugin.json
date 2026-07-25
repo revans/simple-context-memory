@@ -1,6 +1,6 @@
 {
   "name": "simple-context-memory",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Structured, decision-focused memory for Claude Code sessions. Four slash commands — /opening, /closing, /report, /reopen — implement a surgical shift-handoff model so every session starts oriented instead of cold, plus a paired claude-reopen shell tool to jump back into an exact past session. Captures what was decided and why, what was rejected, implicit assumptions, where the agent struggled, and what's still open.",
   "author": {
     "name": "Robert Evans",
