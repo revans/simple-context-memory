@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
 context-watch.py — UserPromptSubmit hook
-Reads the current session's JSONL to find the latest input token count.
-Warns Claude when context is approaching the compaction threshold.
+Reads the current session's JSONL to find the latest input token count
+and the model that produced it. Warns Claude when context is approaching
+the compaction threshold for that specific model's context window.
 """
 
 import json
@@ -10,10 +11,47 @@ import os
 import glob
 import sys
 
-CONTEXT_WINDOW = 200_000  # claude-sonnet-4-6
+# Context window by model ID. Update when a new model ships — or better,
+# treat any gap here as a sign this table needs a live source instead of
+# a hardcoded one. Prefix-matched below, so dated snapshots resolve too
+# (e.g. "claude-haiku-4-5-20251001" matches the "claude-haiku-4-5" entry).
+MODEL_CONTEXT_WINDOWS = {
+    "claude-fable-5": 1_000_000,
+    "claude-mythos-5": 1_000_000,
+    "claude-opus-5": 1_000_000,
+    "claude-opus-4-8": 1_000_000,
+    "claude-opus-4-7": 1_000_000,
+    "claude-opus-4-6": 1_000_000,
+    "claude-opus-4-5": 1_000_000,
+    "claude-sonnet-5": 1_000_000,
+    "claude-sonnet-4-6": 1_000_000,
+    "claude-sonnet-4-5": 1_000_000,
+    "claude-haiku-4-5": 200_000,
+}
+# Unrecognized model: assume the smaller window. Under-warning (missing a
+# real risk of compaction) is worse than over-warning, so the fallback is
+# conservative rather than optimistic.
+DEFAULT_CONTEXT_WINDOW = 200_000
 
 WARN_THRESHOLD  = 0.60   # 60% — first notice
 URGENT_THRESHOLD = 0.75  # 75% — run /closing now
+
+
+def get_context_window(model_id):
+    if not model_id:
+        return DEFAULT_CONTEXT_WINDOW
+    if model_id in MODEL_CONTEXT_WINDOWS:
+        return MODEL_CONTEXT_WINDOWS[model_id]
+    for prefix, window in MODEL_CONTEXT_WINDOWS.items():
+        if model_id.startswith(prefix):
+            return window
+    return DEFAULT_CONTEXT_WINDOW
+
+
+def format_window(n):
+    if n >= 1_000_000 and n % 1_000_000 == 0:
+        return f"{n // 1_000_000}M"
+    return f"{n // 1000}k"
 
 
 def find_current_session_jsonl(hook_input):
@@ -31,7 +69,9 @@ def find_current_session_jsonl(hook_input):
     return max(files, key=os.path.getmtime)
 
 
-def get_last_input_tokens(path):
+def get_last_usage_and_model(path):
+    """Scan the transcript backwards for the most recent assistant turn's
+    token usage and the model that produced it."""
     try:
         with open(path, "rb") as f:
             f.seek(0, 2)
@@ -52,7 +92,8 @@ def get_last_input_tokens(path):
                     try:
                         d = json.loads(line)
                         if d.get("type") == "assistant":
-                            usage = d.get("message", {}).get("usage", {})
+                            message = d.get("message", {})
+                            usage = message.get("usage", {})
                             if usage:
                                 total = (
                                     usage.get("input_tokens", 0)
@@ -60,7 +101,7 @@ def get_last_input_tokens(path):
                                     + usage.get("cache_creation_input_tokens", 0)
                                 )
                                 if total > 0:
-                                    return total
+                                    return total, message.get("model")
                     except (json.JSONDecodeError, KeyError):
                         continue
 
@@ -69,7 +110,8 @@ def get_last_input_tokens(path):
                 try:
                     d = json.loads(tail.strip())
                     if d.get("type") == "assistant":
-                        usage = d.get("message", {}).get("usage", {})
+                        message = d.get("message", {})
+                        usage = message.get("usage", {})
                         if usage:
                             total = (
                                 usage.get("input_tokens", 0)
@@ -77,14 +119,14 @@ def get_last_input_tokens(path):
                                 + usage.get("cache_creation_input_tokens", 0)
                             )
                             if total > 0:
-                                return total
+                                return total, message.get("model")
                 except (json.JSONDecodeError, KeyError):
                     pass
 
     except (OSError, IOError):
         pass
 
-    return None
+    return None, None
 
 
 def main():
@@ -98,22 +140,23 @@ def main():
     if not path:
         return
 
-    tokens = get_last_input_tokens(path)
+    tokens, model_id = get_last_usage_and_model(path)
     if tokens is None:
         return
 
-    pct = tokens / CONTEXT_WINDOW
+    context_window = get_context_window(model_id)
+    pct = tokens / context_window
 
     if pct >= URGENT_THRESHOLD:
         used_k = tokens // 1000
         print(
-            f"⚠️  CONTEXT {int(pct * 100)}% FULL ({used_k}k / {CONTEXT_WINDOW // 1000}k tokens). "
+            f"⚠️  CONTEXT {int(pct * 100)}% FULL ({used_k}k / {format_window(context_window)} tokens). "
             f"Run /closing NOW before compaction discards this session."
         )
     elif pct >= WARN_THRESHOLD:
         used_k = tokens // 1000
         print(
-            f"📊 Context at {int(pct * 100)}% ({used_k}k / {CONTEXT_WINDOW // 1000}k tokens). "
+            f"📊 Context at {int(pct * 100)}% ({used_k}k / {format_window(context_window)} tokens). "
             f"Consider running /closing soon to capture this session before compaction."
         )
 

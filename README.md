@@ -17,6 +17,7 @@ This repo gives you three Claude Code slash commands that implement exactly that
 - [Usage](#usage)
   - [Starting a session](#starting-a-session)
   - [Ending a session](#ending-a-session)
+  - [Verifying before saving](#verifying-before-saving)
   - [Generating a report](#generating-a-report)
   - [Reopening an exact session](#reopening-an-exact-session)
   - [Hooks](#hooks)
@@ -39,9 +40,11 @@ Captures everything worth preserving from the session: what was built, why it wa
 
 "Archaeology" is the right word here — the document records the *decisions*, not just the *artifacts*. The code already shows you what was built. Only this document shows you why the obvious alternative wasn't chosen, and where to be careful even when nothing looks obviously wrong.
 
+Before saving, `/closing` checks its own work rather than taking its own draft on faith. The "Files Changed" section is checked mechanically against `git status`/`git diff` — the one section with an actual receipt to check against. The narrative sections (Why We Did It This Way, Roads Not Taken, Assumptions Made) have no receipt — the only evidence is the conversation itself — so a subagent reads the real session transcript from disk and flags any claim it can't find direct support for. See [Verifying before saving](#verifying-before-saving) for how that works.
+
 ### `/report` — Synthesize open work across all sessions
 
-Reads every session document and produces a single project state report at `docs/reports/report.md`. Four sections: every still-open deferral (cross-referenced against later sessions to confirm it was never resolved), every Do Not constraint accumulated across all Roads Not Taken, every standing assumption nobody has yet confirmed or overturned, and every fragile area still flagged as needing extra scrutiny. Each item links back to the session it came from.
+Reads every session document and produces a single project state report at `docs/reports/report.md`. Four sections: every still-open deferral (cross-referenced against later sessions to confirm it was never resolved), every Do Not constraint accumulated across all Roads Not Taken (flagged **⚠️ Unaudited** if no later session has ever referenced it — a standing guardrail that's been running purely on faith), every standing assumption nobody has yet confirmed or overturned, and every fragile area still flagged as needing extra scrutiny. Each item links back to the session it came from.
 
 Run it when sessions start accumulating. At 20+ sessions, loading the report plus the 2-3 most recent sessions gives you the same orientation as loading everything — with a fraction of the token cost.
 
@@ -242,7 +245,7 @@ cp simple-context-memory/scripts/post-compact.py ~/.claude/hooks/post-compact.py
 }
 ```
 
-**`context-watch.py`** reads `transcript_path` from the hook's stdin payload to identify the exact JSONL for the current session, then parses it backwards for the last assistant `usage` block, summing `input_tokens`, `cache_read_input_tokens`, and `cache_creation_input_tokens`. The context window is hardcoded to `200_000` (claude-sonnet-4-6) — update the `CONTEXT_WINDOW` constant at the top of the file if you're running a different model.
+**`context-watch.py`** reads `transcript_path` from the hook's stdin payload to identify the exact JSONL for the current session, then parses it backwards for the last assistant turn, reading its `usage` block (summing `input_tokens`, `cache_read_input_tokens`, and `cache_creation_input_tokens`) alongside the `model` field on that same turn. The model name is looked up in a `MODEL_CONTEXT_WINDOWS` table at the top of the file — e.g. Claude Opus 5 and Claude Sonnet 5 are both 1M-token windows, Claude Haiku 4.5 is 200K — so the percentage is computed against the model actually running, not a fixed guess. A model not in the table falls back to `DEFAULT_CONTEXT_WINDOW` (200K, the conservative choice — under-warning is worse than over-warning). Add a new model's entry to the table rather than editing a single constant.
 
 **`pre-compact.py`** prints the full session document format as an instruction. Claude writes the file before compaction proceeds.
 
@@ -361,6 +364,28 @@ Notice what this document does that the code and git history don't: the Do Not c
 
 This writes a focused document covering only the conversation around that topic, with a slug derived from your argument. Useful when a session covered multiple unrelated things and you only want to preserve one of them cleanly.
 
+**Fast closing** — skip the transcript audit (see below) when you want a quick close and don't need it double-checked:
+
+```
+/closing --fast
+```
+
+Combine with a scope if needed: `/closing webhook-auth-decision --fast`. The mechanical git check (Files Changed) still runs either way — it's instant. Only the slower, subagent-driven narrative audit is skipped.
+
+---
+
+### Verifying before saving
+
+A session document is only useful if it's true. Before it's written, `/closing` checks itself rather than trusting its own first draft — and it checks two different kinds of claims two different ways, because they have two different kinds of evidence.
+
+**Files Changed has a receipt.** The working tree is independent ground truth, so this section is checked mechanically: `git status --porcelain` and `git diff --stat` against the draft's file list. Anything actually touched but missing gets added; anything listed but not actually touched gets removed. No judgment involved — this is arithmetic, runs in a fraction of a second, and always runs — `--fast` doesn't skip it.
+
+**Why We Did It This Way, Roads Not Taken, and Assumptions Made have no receipt.** The only evidence that a decision was actually reasoned through — not just written to sound reasoned — is the conversation itself. Having the same agent that just wrote those sections re-read them isn't an audit; it's the same reasoning checking its own homework. So `/closing` hands the job to a subagent instead — but a subagent starts with no memory of this conversation, so it's pointed at the actual transcript file Claude Code already writes to disk (`~/.claude/projects/<project>/<session_id>.jsonl`), not at anything inherited. It reads the real record independently and flags any claim in those three sections it can't find direct support for. Flagged claims aren't deleted — they're marked `[unverified]`, or moved into Assumptions Made if they read more like a quietly-filled-in default than something actually considered and rejected.
+
+This is the expensive step — the subagent reads the whole session transcript, so cost and latency scale with how long the session ran (multiple minutes on a long, tool-heavy session is normal). Pass `--fast` to skip it when speed matters more than the extra check; leave it on for sessions with real reasoning worth preserving accurately. It's on by default because an unaudited claim looks exactly as confident as an audited one — the default should be the version that's actually been checked.
+
+If `session_id` was never captured (older sessions, or running outside the CLI), the narrative audit is skipped and the document says so explicitly — it doesn't silently pass.
+
 ---
 
 ### Generating a report
@@ -371,7 +396,7 @@ Once sessions start accumulating, run:
 /report
 ```
 
-Claude reads all session documents, identifies every Open Questions & Next Steps item that was never resolved in a later session, collects every Do Not constraint from Roads Not Taken, every standing Assumption Made that was never confirmed or overturned, and every Fragile Area from Where the Agent Struggled that was never resolved by later work — then writes a single report to `docs/reports/report.md`. Each item links back to the session it came from.
+Claude reads all session documents, identifies every Open Questions & Next Steps item that was never resolved in a later session, collects every Do Not constraint from Roads Not Taken (tracking, per constraint, how many sessions have passed since any later session referenced it — flagged **⚠️ Unaudited** once that count gets long relative to the project's total history), every standing Assumption Made that was never confirmed or overturned, and every Fragile Area from Where the Agent Struggled that was never resolved by later work — then writes a single report to `docs/reports/report.md`. Each item links back to the session it came from.
 
 The report is always one file — it overwrites on each run. The frontmatter tracks `last_session`, the filename of the newest session the report covers. On the next run, `/report` reads that cursor and only processes sessions after it, so you're not re-reading 50 files when 3 are new.
 

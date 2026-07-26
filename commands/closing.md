@@ -1,9 +1,10 @@
 ---
 name: Closing
-description: End-of-session archaeology document. Captures a summary, what was built and why, alternatives rejected with forward Do-Not constraints, key discoveries as Q→A pairs, implicit assumptions made, where the agent struggled, and open questions with next steps. Saved to docs/sessions/ with a timestamp filename so future sessions can continue without re-deriving context. Accepts an optional scope argument to limit capture to a specific topic.
+description: End-of-session archaeology document. Captures a summary, what was built and why, alternatives rejected with forward Do-Not constraints, key discoveries as Q→A pairs, implicit assumptions made, where the agent struggled, and open questions with next steps. Saved to docs/sessions/ with a timestamp filename so future sessions can continue without re-deriving context. Accepts an optional scope argument to limit capture to a specific topic, and an optional --fast flag to skip the transcript-based narrative audit.
 color: purple
 arguments:
   - scope (optional)
+  - --fast (optional) — skip Step 6's independent transcript audit for a quicker close. Step 5's mechanical git check still runs either way.
 ---
 
 # Session Closing
@@ -12,15 +13,17 @@ Write a detailed session archaeology document and save it to `docs/sessions/` in
 
 ---
 
-## Step 0 — Determine scope
+## Step 0 — Determine scope and mode
 
-Check whether a `$scope` argument was provided.
+Check the arguments for a `--fast` flag (anywhere in the argument string, in any position). If present, strip it out and set fast mode — Step 6's narrative audit will be skipped later. Fast mode trades away the audit's independent check for speed: Step 6 spawns a subagent that reads the full session transcript, which scales with session length and can take several minutes on a long session. Use `--fast` when you want a quick close and are willing to accept the narrative sections unaudited; leave it off for sessions where the reasoning is worth double-checking before it's the permanent record.
 
-**No argument:** capture the full session — everything built, decided, explored, and rejected across the entire conversation.
+Whatever remains after stripping `--fast` is the `$scope` argument — check whether it's non-empty.
 
-**Argument provided:** the value of `$scope` is the topic focus. Only capture conversation content that relates to that topic. Treat the rest of the session as background — do not include it in any section. The slug is derived from `$scope` (kebab-case, 2–4 words), not inferred from the full session.
+**No scope:** capture the full session — everything built, decided, explored, and rejected across the entire conversation.
 
-Carry the scope (or "full session" if none) forward — it determines what content is eligible for each section in Step 4.
+**Scope provided:** the value of `$scope` is the topic focus. Only capture conversation content that relates to that topic. Treat the rest of the session as background — do not include it in any section. The slug is derived from `$scope` (kebab-case, 2–4 words), not inferred from the full session.
+
+Carry the scope (or "full session" if none) and the fast-mode flag forward — the scope determines what content is eligible for each section in Step 4; fast mode determines whether Step 6 runs at all.
 
 ---
 
@@ -198,16 +201,75 @@ reflect areas where context compression may have affected recall accuracy.*
 
 ---
 
-## Step 5 — Compress uncertain sections honestly
+## Step 5 — Verify Files Changed against git (mechanical, no re-reasoning)
 
-This command runs at the end of a potentially long session. The harness compresses long conversations. If you are uncertain about the exact reasoning behind something — especially from early in the session — say so in the relevant section rather than reconstructing it confidently. Append `[uncertain]` to any bullet or paragraph where memory may be incomplete.
+The "Files Changed" section is the one section in this document with independent ground truth — the working tree itself. Check the draft against it before anything else, and before any narrative auditing in Step 6.
+
+```bash
+git rev-parse --is-inside-work-tree 2>/dev/null
+```
+
+If this fails (not a git repo), skip this step and note in the document itself: "Files Changed could not be verified against git — no repository present."
+
+If it succeeds, run:
+```bash
+git status --porcelain
+git diff --stat HEAD 2>/dev/null
+```
+
+Cross-reference the actual touched files (staged, unstaged, and untracked) against the draft's "Files Changed" section:
+- A file that was actually touched but is missing from the draft — add it.
+- A file listed in the draft but not shown as touched by git — remove it, unless it changed outside this repo's working tree (e.g. files under `~/.claude/` synced by `init.sh`), in which case keep it but note it wasn't checked by this step.
+
+This is arithmetic, not judgment — do not skip it because the draft "looks right." Looking right is exactly what an unverified claim does.
 
 ---
 
-## Step 6 — Confirm
+## Step 6 — Independent audit of Why We Did It This Way, Roads Not Taken, and Assumptions Made
+
+Files Changed had a receipt to check against. These three sections don't — the only evidence that a decision was actually reasoned through, not just written to sound reasoned, is the conversation itself. Re-reading your own draft against your own memory of the conversation is not an audit — it's the same reasoning checking its own homework. Use a subagent instead, but a subagent starts blank; it does not inherit this conversation's history. Point it at the actual record on disk instead:
+
+```
+~/.claude/projects/{{cwd with every "/" replaced by "-"}}/{{session_id}}.jsonl
+```
+
+`{{cwd}}` is the absolute working directory from Step 1; `{{session_id}}` is the value already recorded in this document's frontmatter.
+
+**Skip this step** if fast mode (`--fast`) was requested, if `session_id` is null, or if the transcript file doesn't exist at that path. Note which reason applies directly in the document — "Narrative sections unaudited — fast mode requested" or "Narrative sections unaudited — no session transcript available" — rather than silently skipping. Do not run a lighter version of the audit yourself as a compromise for fast mode: a partial self-check is exactly the "same reasoning checking its own homework" problem this step exists to avoid. Fast mode means no audit, not a cheaper one.
+
+Otherwise, spawn a subagent (Agent tool) with this self-contained prompt:
+
+> You are auditing a session document against the raw conversation it claims to summarize. You were not part of this conversation — read the transcript yourself, don't take the document's word for anything.
+>
+> **Transcript file:** `{{absolute path to the .jsonl file}}` — a JSONL conversation log, one JSON object per line. User and assistant turns carry a `message.content` array of text / tool_use / tool_result blocks. Read it directly. If it's large, you don't need every tool result verbatim — focus on user turns and assistant reasoning/text, and grep for specific keywords if you need to confirm one claim rather than reading front to back.
+>
+> **Claims to check** (from the draft's Why We Did It This Way, Roads Not Taken, and Assumptions Made sections):
+> {{paste all three sections verbatim}}
+>
+> For each individual claim, decide: is there direct evidence in the transcript that this was actually said, decided, or reasoned through — not merely plausible, but actually present? Return the claims you could NOT find direct support for, each with a one-line reason.
+
+Take the subagent's list and, for each unsupported claim, either:
+- append `[unverified — not directly supported by the session transcript]` in place, or
+- if it reads more like a default that was quietly filled in than an alternative that was actually considered and rejected, move it out of Roads Not Taken and into Assumptions Made — that's what that section is for.
+
+Do not delete a flagged claim. An unverified claim is still information — its confidence just dropped, and now a future reader can see that instead of inheriting false certainty.
+
+---
+
+## Step 7 — Compress uncertain sections honestly
+
+This command runs at the end of a potentially long session. The harness compresses long conversations. If you are uncertain about the exact reasoning behind something — especially from early in the session — say so in the relevant section rather than reconstructing it confidently. Append `[uncertain]` to any bullet or paragraph where memory may be incomplete.
+
+This is a different failure mode than Step 6: Step 6 catches claims the transcript flatly doesn't support. This step covers claims you're personally unsure about even though a transcript exists and might support them — you just don't have confidence it does.
+
+---
+
+## Step 8 — Confirm
 
 After writing the file, output:
 - The full file path
 - The word count
 - The previous session filename (if any), so the user can see the chain
 - The session_id recorded (or a note that it was unavailable), so the user knows whether `/reopen` can jump back into this exact conversation later
+- Whether Files Changed was verified against git, and how many corrections Step 5 made (or why it was skipped)
+- Whether the narrative audit ran, and how many claims Step 6 flagged as unverified (or why it was skipped)

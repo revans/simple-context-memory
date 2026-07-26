@@ -88,6 +88,8 @@ An item is **still open** if no later session references it, or if a later sessi
 
 Collect every **Do not [X] because [Y]** constraint from **Roads Not Taken** across all sessions.
 
+For each constraint, also count how many sessions after the one that recorded it never mention or rely on it again — in any section (a later session's What We Did, Why We Did It This Way, Key Discoveries, or a Roads Not Taken entry that revisits the same decision). This is a different signal than resolution: a Do Not constraint is a standing guardrail, not a deferral, so it never gets "resolved" the way an open question does. What it can become instead is **unaudited** — a rule nobody has checked still holds. Track that count per constraint.
+
 Collect every entry from **Assumptions Made** across all sessions. An assumption is **resolved** (drop it) if a later session's **Why We Did It This Way** or **Key Discoveries** explicitly confirms it holds or explicitly overturns it. Otherwise it's **standing** — still true as far as anyone has checked, and still worth a future reader's attention.
 
 Collect every entry from **Where the Agent Struggled** across all sessions. A flagged area is **resolved** if a later session revisits it and settles the ambiguity or confirms the fragile part held up under further work. Otherwise it stays **flagged**. If the same fragile area recurs across multiple sessions without ever getting resolved, note the recurrence explicitly — a repeatedly-struggled-with area is a stronger signal than a single mention.
@@ -107,9 +109,10 @@ You have an existing report (the baseline) and a set of new sessions to process.
 4. Collect any new items from each new session's **Open Questions & Next Steps** and add them to the working set
 
 **For Do Not Constraints:**
-1. Start with the existing report's Do Not Constraints list
-2. Collect any new constraints from each new session's **Roads Not Taken** and add them
+1. Start with the existing report's Do Not Constraints list, including each constraint's carried-over "sessions since last referenced" count
+2. Collect any new constraints from each new session's **Roads Not Taken** and add them, starting their count at 0
 3. If a new constraint is substantively identical to an existing one, keep it once and note it recurred
+4. For each existing constraint: if any new session references or relies on it (per the definition above), reset its count to 0 and note the reference; otherwise increment its count by the number of new sessions processed this run
 
 **For Standing Assumptions:**
 1. Start with the existing report's Standing Assumptions list as your working set
@@ -153,6 +156,9 @@ Every **Do not [X] because [Y]** constraint from **Roads Not Taken** across all 
 For each constraint:
 - The constraint (verbatim or paraphrased if verbose)
 - Source: `[session-slug](../sessions/filename.md)`
+- Sessions since last referenced (the count tracked above)
+
+If that count is 5 or more — or, when fewer than 10 sessions exist in total, more than half of all sessions covered — prefix the entry with **⚠️ Unaudited**. That flags a rule that's been running purely on faith: nobody has actually checked whether the situation that justified it is still true.
 
 If there are no Do Not constraints, say so explicitly.
 
@@ -213,6 +219,6 @@ Output:
 - Number of sessions processed this run
 - Total sessions the report now reflects
 - Number of open deferrals
-- Number of Do Not constraints
+- Number of Do Not constraints, and how many are flagged ⚠️ Unaudited
 - Number of standing assumptions
 - Number of fragile areas
