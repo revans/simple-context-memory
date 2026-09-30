@@ -194,6 +194,14 @@ Format:
 - `path/to/file.md` — what changed. [Constraint if applicable: why this can't be undone / what to not change back.]
 }}
 
+## Agent Notes
+
+{{Free-form. Anything you, the agent writing this document, think the next session should
+know that doesn't fit the sections above: hunches, things that felt off, user preferences
+you picked up, gotchas, places you're unsure this document is faithful, or advice to your
+future self. Mark guesses as [uncertain]. Not audited in Step 6 — this is your own voice,
+not a claim about the session. Omit this section only if you truly have nothing to add.}}
+
 ---
 *Note: This document was written from conversation context. Sections marked [uncertain]
 reflect areas where context compression may have affected recall accuracy.*

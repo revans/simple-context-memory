@@ -44,6 +44,12 @@ If there is no realistic reversal condition, omit the unless clause.}}
 {{Questions answered this session. Format as question → answer pairs.
 Root causes traced, misconceptions corrected, empirical findings.}}
 
+## Assumptions Made
+{{Implicit choices filled in without explicit deliberation — distinct from Roads Not Taken, which covers alternatives that were actually named and rejected. A default picked, a scope boundary inferred, a dependency assumed available. State each plainly and note what would break if it's wrong. If nothing was assumed beyond what's explicit elsewhere, say so. Mark this section [unaudited] — it is not checked against the transcript.}}
+
+## Where the Agent Struggled
+{{A confidence signal, not a claim about the work. Which parts took multiple attempts, hit genuine ambiguity, or were produced with lower confidence than the rest, even though an answer was delivered. Tells a future session where to apply extra scrutiny. Be honest: "no issues" is only right if nothing was genuinely hard. Mark this section [unaudited] — it is self-reported and not checked against the transcript.}}
+
 ## Open Questions & Next Steps
 {{What was deferred, left unresolved, or suggested but not acted on. Include:
 - Unresolved questions or half-decisions
@@ -54,6 +60,9 @@ Root causes traced, misconceptions corrected, empirical findings.}}
 {{List of files created or modified. For each: what changed + any constraint a future
 session needs before touching it again.
 - `path/to/file` — what changed. [Constraint: why this can't be safely reverted.]}}
+
+## Agent Notes
+{{Free-form. Anything you, the agent doing this compaction, think the next session should know that doesn't fit the sections above: hunches, things that felt off, user preferences you picked up, gotchas, where you're unsure the summary is faithful, or advice to your future self. Mark guesses as [uncertain]. Omit this section only if you truly have nothing to add.}}
 
 ---
 *Note: Written under compaction pressure. Sections marked [uncertain] reflect incomplete recall.*

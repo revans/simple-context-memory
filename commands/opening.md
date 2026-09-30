@@ -191,6 +191,8 @@ Same structured brief as last-1. The document is a specific one you were directe
 
 **Assumptions & fragile spots** — implicit choices the session made without deciding them explicitly (from Assumptions Made), and any parts of the work flagged as struggled-with or lower-confidence (from Where the Agent Struggled). Surface these so continuing work doesn't silently build on an unverified assumption, or treat a fragile area as more solid than it actually is.
 
+**Agent notes** — anything the previous agent left in Agent Notes for its successor (hunches, gotchas, picked-up user preferences, doubts). Pass these along in the prior agent's voice and keep any `[uncertain]` marks; they are unaudited hints, not settled fact. Omit this line if the section is absent or empty.
+
 ---
 
 ### last-1 and last-2 (and date modes, or session mode, with 1–2 results)
@@ -207,6 +209,8 @@ Present a structured brief — not a raw dump. Include:
 
 **Assumptions & fragile spots** — implicit choices made without explicit deliberation, and any parts of the work flagged as struggled-with or lower-confidence. Surface these so continuing work doesn't silently build on an unverified assumption, or treat a fragile area as more solid than it actually is.
 
+**Agent notes** — anything the previous agent(s) left in Agent Notes for their successor (hunches, gotchas, picked-up user preferences, doubts). Pass these along keeping any `[uncertain]` marks; they are unaudited hints, not settled fact. Omit this line if the section is absent or empty.
+
 If reading two sessions, synthesize across both — what changed, what got resolved, what was added to the pending list, and whether a fragile spot from the first session got confirmed solid or stayed shaky in the second.
 
 For session mode specifically with two checkpoints: these are not two sessions, they're the same conversation checkpointed twice. Read the second checkpoint as the superseding, later state of anything the first also covers — don't present them as if two different sessions independently reached different conclusions.
@@ -216,6 +220,8 @@ For session mode specifically with two checkpoints: these are not two sessions, 
 ### last-N (3+), today, yesterday, last-week, all (when 3+ files), session mode (3+ checkpoints)
 
 Same structure as above, but organize by what's **still live** versus what's **resolved or shipped**. Resolved items get one line. Live items get the full treatment — state, why the decision was made, what's open. For assumptions and fragile spots specifically: drop any that a later session explicitly confirmed or resolved; keep and flag any that recur across multiple sessions without ever getting checked — a repeatedly-unverified assumption or a repeatedly-fragile area is a stronger signal than a single mention.
+
+Agent notes get the same treatment: keep the ones that still apply (note which session each came from), drop ones a later session contradicts or makes moot, and call out any note that repeats across sessions — a hint multiple agents independently left is worth more than one.
 
 For date-range modes (today, yesterday, last-week), group by session at the top — one line per session showing the slug and what it covered — then the synthesized brief below. This gives a "what happened in this period" overview before the detail.
 
